@@ -10,21 +10,27 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
 
   // If this is the add or edit form for field_storage, we call our function.
   if ($form_id === 'field_storage_add_form' || $form_id === 'field_storage_config_edit_form') {
-    /**
-     * @var \Drupal\field\Entity\FieldStorageConfig
-     */
-    $field = $form_state->getFormObject()->getEntity();
 
-    // Add our encrypted field to the form.
-    $form['encrypt'] = [
-      '#type' => 'checkbox',
-      '#title' => t('Encrypted'),
-      '#description' => t('Makes the field storage encrypted.'),
-      '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
-    ];
+    // Check permissions
+    $user = \Drupal::currentUser();
 
-    // We add a function to process the form when it is saved.
-    $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
+    if ($user->hasPermission('administer field encryption')) {
+      /**
+       * @var \Drupal\field\Entity\FieldStorageConfig
+       */
+      $field = $form_state->getFormObject()->getEntity();
+
+      // Add our encrypted field to the form.
+      $form['encrypt'] = [
+        '#type' => 'checkbox',
+        '#title' => t('Encrypted'),
+        '#description' => t('Makes the field storage encrypted.'),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
+      ];
+
+      // We add a function to process the form when it is saved.
+      $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
+    }
   }
 }
 
