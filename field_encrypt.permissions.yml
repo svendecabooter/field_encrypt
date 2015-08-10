@@ -1,0 +1,4 @@
+administer text field encryption:
+  title: 'Administer text field encryption'
+  description: 'Allows certain text fields to be individually encrypted so that their data is better protected.'
+  restrict access: true

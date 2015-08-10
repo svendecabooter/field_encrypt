@@ -1,0 +1,7 @@
+field.storage.*.*.third_party.field_encrypt:
+  type: mapping
+  label: 'Field encrypt setting'
+  mapping:
+    encrypt:
+      type: boolean
+      label: 'Encrypt'

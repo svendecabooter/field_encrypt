@@ -1,0 +1,41 @@
+<?php
+/**
+ * Contains module hooks for field_encrypt
+ */
+
+/**
+ * Implements hook_form_alter.
+ */
+function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+
+  // If this is the add or edit form for field_storage, we call our function.
+  if ($form_id === 'field_storage_add_form' || $form_id === 'field_storage_config_edit_form') {
+    /**
+     * @var \Drupal\field\Entity\FieldStorageConfig
+     */
+    $field = $form_state->getFormObject()->getEntity();
+
+    // Add our encrypted field to the form.
+    $form['encrypt'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Encrypted'),
+      '#description' => t('Makes the field storage encrypted.'),
+      '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
+    ];
+
+    // We add a function to process the form when it is saved.
+    $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
+  }
+}
+
+function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+
+  // If the form has the value, we set it.
+  if ($form_state->getValue('encrypt')) {
+    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_state->getValue('encrypt'));
+  }
+  else {
+    // If there is no value, remove.
+    $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
+  }
+}
