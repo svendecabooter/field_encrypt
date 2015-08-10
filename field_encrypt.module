@@ -50,34 +50,45 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
 }
 
 function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
-  $x = 1;
+  field_encrypt_process_encrypted_fields($entity, 'encrypt');
 }
 
 function field_encrypt_entity_load($entities, $entity_type) {
-
   foreach($entities as &$entity) {
-    // Make sure we can get field definitions.
-    if (!is_callable([$entity, 'getFieldDefinitions'])){return;}
-    if (!is_callable([$entity, 'getFields'])){return;}
-    //$entity->getFieldDefinitions();
-    $entity->getFields();
+    field_encrypt_process_encrypted_fields($entity, 'decrypt');
+  }
+}
 
-    foreach($entity->getFieldDefinitions() as $name => $definition) {
-      if (!is_callable([$definition, 'get'])){continue;}
+function field_encrypt_process_encrypted_fields(\Drupal\Core\Entity\EntityInterface $entity, $op = 'encrypt') {
+  // Make sure we can get field definitions.
+  if (!is_callable([$entity, 'getFieldDefinitions'])){return;}
+  if (!is_callable([$entity, 'getFields'])){return;}
+  //$entity->getFieldDefinitions();
+  $entity->getFields();
 
-      $storage = $definition->get('fieldStorage');
-      if (is_null($storage)) {continue;}
+  foreach($entity->getFieldDefinitions() as $name => $definition) {
+    if (!is_callable([$definition, 'get'])){continue;}
 
-      $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
+    $storage = $definition->get('fieldStorage');
+    if (is_null($storage)) {continue;}
 
-      if ($encrypted) {
-        // Load the encyption service.
-        // @var \Drupal\encrypt\EncryptService
-        $encryption_service = Drupal::service('encryption');
+    $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
 
-        $replacement = $encryption_service->decrypt($entity->get($name)->value);
-        $entity->set($name, $replacement);
+    if ($encrypted) {
+      // Load the encyption service.
+      // @var \Drupal\encrypt\EncryptService
+      $encryption_service = Drupal::service('encryption');
+
+      if ($op === 'encrypt') {
+        $replacement = $encryption_service->encrypt($entity->get($name)->value);
       }
+      elseif ($op === 'decrypt') {
+        $replacement = $encryption_service->decrypt($entity->get($name)->value);
+      }
+
+      // TODO: This code only works for basic fields. It does not correctly work for fields like the body which have markup in them.
+      $entity->set($name, $replacement, FALSE);
+
     }
   }
 }
