@@ -39,9 +39,47 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
   // If the form has the value, we set it.
   if ($form_state->getValue('encrypt')) {
     $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_state->getValue('encrypt'));
+
+    // TODO: We need to process the field to either batch encrypt or batch decrypt if the setting was changed.
+
   }
   else {
     // If there is no value, remove.
     $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
   }
 }
+
+function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
+  $x = 1;
+}
+
+function field_encrypt_entity_load($entities, $entity_type) {
+
+  foreach($entities as &$entity) {
+    // Make sure we can get field definitions.
+    if (!is_callable([$entity, 'getFieldDefinitions'])){return;}
+    if (!is_callable([$entity, 'getFields'])){return;}
+    //$entity->getFieldDefinitions();
+    $entity->getFields();
+
+    foreach($entity->getFieldDefinitions() as $name => $definition) {
+      if (!is_callable([$definition, 'get'])){continue;}
+
+      $storage = $definition->get('fieldStorage');
+      if (is_null($storage)) {continue;}
+
+      $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
+
+      if ($encrypted) {
+        // Load the encyption service.
+        // @var \Drupal\encrypt\EncryptService
+        $encryption_service = Drupal::service('encryption');
+
+        $replacement = $encryption_service->decrypt($entity->get($name)->value);
+        $entity->set($name, $replacement);
+      }
+    }
+  }
+}
+
+
