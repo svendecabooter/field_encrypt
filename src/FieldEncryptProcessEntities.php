@@ -5,8 +5,6 @@
 
 namespace Drupal\field_encrypt;
 
-use Drupal\Core\Entity\EntityDefinitionUpdateManagerInterface;
-use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\encrypt\EncryptService;
 
 /**
@@ -15,30 +13,26 @@ use Drupal\encrypt\EncryptService;
 class FieldEncryptProcessEntities {
 
   /**
-   * The entity manager.
-   *
-   * @var \Drupal\Core\Entity\EntityManagerInterface
+   * Filter (blacklist) field types that don't work with encryption.
    */
-  protected $entityManager;
+  public $blacklist_fields = [
+    'image',
+    'boolean',
+    'integer',
+    'entity_reference',
+  ];
 
   /**
-   * The entity definition update manager.
+   * Encryption service.
    *
-   * @var \Drupal\Core\Entity\EntityDefinitionUpdateManagerInterface
+   * @var \Drupal\encrypt\EncryptService
    */
-  protected $updateManager;
-
   protected $encryptService;
 
   /**
-   * Constructs an updates manager instance.
-   *
-   * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
-   *   The entity manager.
    * @param \Drupal\encrypt\EncryptService $encrypt_service
    */
-  public function __construct(EntityManagerInterface $entity_manager, EncryptService $encrypt_service) {
-    $this->entityManager = $entity_manager;
+  public function __construct(EncryptService $encrypt_service) {
     $this->encryptService = $encrypt_service;
   }
 
@@ -61,6 +55,25 @@ class FieldEncryptProcessEntities {
   }
 
   /**
+   * Encrypt or Decrypt a value.
+   *
+   * @param string $value
+   * @param string $op
+   * @return string
+   */
+  protected function process_value($value = '', $op = 'encrypt') {
+    if ($op === 'encrypt') {
+      return $this->encryptService->encrypt($value);
+    }
+    elseif ($op === 'decrypt') {
+      return $this->encryptService->decrypt($value);
+    }
+    else {
+      return '';
+    }
+  }
+
+  /**
    * Process an entity to either encrypt or decrypt its fields.
    *
    * Both processes are very similar, so we bundle the field processing part.
@@ -79,29 +92,51 @@ class FieldEncryptProcessEntities {
      * @var $definition \Drupal\Core\Field\FieldItemBase
      */
     foreach($entity->getFieldDefinitions() as $name => $definition) {
-      if (!is_callable([$definition, 'get'])){continue;}
+      if (!is_callable([$definition, 'get'])){
+        continue;
+      }
+
+      /**
+       * Filter (blacklist) field types that don't work with encryption.
+       */
+      if (in_array($definition->get('field_type'),$this->blacklist_fields)) {
+        continue;
+      }
 
       /**
        * @var $storage \Drupal\Core\Field\FieldConfigStorageBase
        */
       $storage = $definition->get('fieldStorage');
-      if (is_null($storage)) {continue;}
+      if (is_null($storage)) {
+        continue;
+      }
 
+      // Check if the field is encrypted.
       $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
+      if (!$encrypted) {
+        continue;
+      }
 
-      if ($encrypted) {
-        $replacement = '';
-
-        if ($op === 'encrypt') {
-          $replacement = $this->encryptService->encrypt($entity->get($name)->value);
+      // Check if we are using a multivalue field or not.
+      $multi_value_field = $storage->get('cardinality') !== 1;
+      if ($multi_value_field) {
+        /**
+         * @var $field \Drupal\Core\Field\FieldItemList
+         */
+        $field = $entity->get($name);
+        $field_value = $field->getValue();
+        foreach($field_value as &$value) {
+          $value['value'] = $this->process_value($value['value'], $op);
         }
-        elseif ($op === 'decrypt') {
-          $replacement = $this->encryptService->decrypt($entity->get($name)->value);
-        }
-
-        // TODO: This code only works for basic fields. It does not correctly work for fields like the body which have markup in them.
-        $entity->set($name, $replacement, FALSE);
-
+        // Set the new value.
+        // We don't need to update the entity because the field setValue does that already.
+        $field->setValue($field_value);
+      }
+      else {
+        // Single value field.
+        $replacement = $this->process_value($entity->get($name)->value, $op);
+        $entity->set($name, $replacement);
+        unset($replacement);
       }
     }
   }

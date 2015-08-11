@@ -1,0 +1,4 @@
+services:
+  field_encrypt.process_entities:
+    class: Drupal\field_encrypt\FieldEncryptProcessEntities
+    arguments: ['@encryption']
