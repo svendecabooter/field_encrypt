@@ -14,12 +14,44 @@ class FieldEncryptProcessEntities {
 
   /**
    * Filter (blacklist) field types that don't work with encryption.
+   *
+   * This list is mostly to avoid problems, but we shouldn't let people encrypt
+   * these fields since we know it wouldn't work.
    */
   public $blacklist_fields = [
     'image',
+    'entity_reference',
+    'datetime',
     'boolean',
     'integer',
-    'entity_reference',
+    'decimal',
+    'float',
+    'list_integer',
+    'list_float',
+  ];
+
+  /**
+   * A whitelist of field types that work with encryption.
+   *
+   * We aren't using this list at this point and it may not make sense to use it
+   * is easy for people to encrypt custom fields.
+   */
+  public $whitelist_fields = [
+    'text',
+    'text_with_summary',
+    'comment',
+    'email',
+    'link',
+  ];
+
+  /**
+   * Fields that may be used in complex fields to store values.
+   */
+  public $field_value_fields = [
+    'value',
+    'summary',
+    'uri',
+    'title',
   ];
 
   /**
@@ -117,27 +149,22 @@ class FieldEncryptProcessEntities {
         continue;
       }
 
-      // Check if we are using a multivalue field or not.
-      $multi_value_field = $storage->get('cardinality') !== 1;
-      if ($multi_value_field) {
-        /**
-         * @var $field \Drupal\Core\Field\FieldItemList
-         */
-        $field = $entity->get($name);
-        $field_value = $field->getValue();
-        foreach($field_value as &$value) {
-          $value['value'] = $this->process_value($value['value'], $op);
+      /**
+       * @var $field \Drupal\Core\Field\FieldItemList
+       */
+      $field = $entity->get($name);
+      $field_value = $field->getValue();
+      foreach($field_value as &$value) {
+        // Process each of the sub fields that exits.
+        foreach($this->field_value_fields as $field_name) {
+          if(isset($value[$field_name])){
+            $value[$field_name] = $this->process_value($value[$field_name], $op);
+          }
         }
-        // Set the new value.
-        // We don't need to update the entity because the field setValue does that already.
-        $field->setValue($field_value);
       }
-      else {
-        // Single value field.
-        $replacement = $this->process_value($entity->get($name)->value, $op);
-        $entity->set($name, $replacement);
-        unset($replacement);
-      }
+      // Set the new value.
+      // We don't need to update the entity because the field setValue does that already.
+      $field->setValue($field_value);
     }
   }
 
