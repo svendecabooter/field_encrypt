@@ -5,18 +5,20 @@
 
 /**
  * Implements hook_form_alter.
+ *
+ * Add a field to the field storage configuration forms to allow setting the encryption state.
  */
 function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
 
   // If this is the add or edit form for field_storage, we call our function.
-  if ($form_id === 'field_storage_add_form' || $form_id === 'field_storage_config_edit_form') {
+  if (in_array($form_id, ['field_storage_add_form', 'field_storage_config_edit_form'])) {
 
     // Check permissions
     $user = \Drupal::currentUser();
 
     if ($user->hasPermission('administer field encryption')) {
       /**
-       * @var \Drupal\field\Entity\FieldStorageConfig
+       * @var $field \Drupal\field\Entity\FieldStorageConfig
        */
       $field = $form_state->getFormObject()->getEntity();
 
@@ -34,63 +36,74 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
   }
 }
 
+/**
+ * Update the field storage configuration to set the encryption state.
+ *
+ * @param $entity_type
+ * @param \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
 
+  $form_encryption = $form_state->getValue('encrypt');
+  $original_encryption = $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt');
+
   // If the form has the value, we set it.
-  if ($form_state->getValue('encrypt')) {
-    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_state->getValue('encrypt'));
-
-    // TODO: We need to process the field to either batch encrypt or batch decrypt if the setting was changed.
-
+  if ($form_encryption === 1) {
+    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_encryption);
   }
   else {
     // If there is no value, remove.
     $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
   }
-}
 
-function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
-  field_encrypt_process_encrypted_fields($entity, 'encrypt');
-}
+  if ($original_encryption !== $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt')) {
+    // We need to process the field to either encrypt or decrypt the stored fields if the setting was changed.
+    $field_name = $fieldStorageConfig->get('field_name');
+    $field_entity_type = $fieldStorageConfig->get('entity_type');
 
-function field_encrypt_entity_load($entities, $entity_type) {
-  foreach($entities as &$entity) {
-    field_encrypt_process_encrypted_fields($entity, 'decrypt');
-  }
-}
-
-function field_encrypt_process_encrypted_fields(\Drupal\Core\Entity\EntityInterface $entity, $op = 'encrypt') {
-  // Make sure we can get field definitions.
-  if (!is_callable([$entity, 'getFieldDefinitions'])){return;}
-  if (!is_callable([$entity, 'getFields'])){return;}
-  //$entity->getFieldDefinitions();
-  $entity->getFields();
-
-  foreach($entity->getFieldDefinitions() as $name => $definition) {
-    if (!is_callable([$definition, 'get'])){continue;}
-
-    $storage = $definition->get('fieldStorage');
-    if (is_null($storage)) {continue;}
-
-    $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
-
-    if ($encrypted) {
-      // Load the encyption service.
-      // @var \Drupal\encrypt\EncryptService
-      $encryption_service = Drupal::service('encryption');
-
-      if ($op === 'encrypt') {
-        $replacement = $encryption_service->encrypt($entity->get($name)->value);
-      }
-      elseif ($op === 'decrypt') {
-        $replacement = $encryption_service->decrypt($entity->get($name)->value);
-      }
-
-      // TODO: This code only works for basic fields. It does not correctly work for fields like the body which have markup in them.
-      $entity->set($name, $replacement, FALSE);
-
+    /**
+     * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+     */
+    $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+    if ($form_encryption === 1) {
+      $field_encrypt_process_entities->encrypt_stored_field($field_entity_type, $field_name);
+    }
+    elseif ($form_encryption === 0) {
+      $field_encrypt_process_entities->decrypt_stored_field($field_entity_type, $field_name);
     }
   }
 }
 
+/**
+ * Encrypt fields before they are saved.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
+  if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {return;}
+  /**
+   * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+   */
+  $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+  $field_encrypt_process_entities->encrypt_entity($entity);
+}
 
+/**
+ * Decrypt fields before they are rendered.
+ *
+ * @param $entities
+ * @param $entity_type
+ */
+function field_encrypt_entity_load($entities, $entity_type) {
+  /**
+   * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+   */
+  $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+
+  foreach($entities as &$entity) {
+    if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {continue;}
+    $field_encrypt_process_entities->decrypt_entity($entity);
+  }
+}
