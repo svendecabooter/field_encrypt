@@ -8,54 +8,12 @@ namespace Drupal\field_encrypt;
 use Drupal\Core\Entity\EntityManager;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\encrypt\EncryptService;
+use Drupal\pants\Annotation\FieldEncryptMap;
 
 /**
  *
  */
 class FieldEncryptProcessEntities {
-
-  /**
-   * Filter (blacklist) field types that don't work with encryption.
-   *
-   * This list is mostly to avoid problems, but we shouldn't let people encrypt
-   * these fields since we know it wouldn't work.
-   */
-  public $blacklist_fields = [
-    'image',
-    'entity_reference',
-    'datetime',
-    'boolean',
-    'integer',
-    'decimal',
-    'float',
-    'list_integer',
-    'list_float',
-  ];
-
-  /**
-   * A whitelist of field types that work with encryption.
-   *
-   * We aren't using this list at this point and it may not make sense to use it
-   * is easy for people to encrypt custom fields.
-   */
-  public $whitelist_fields = [
-    'text',
-    'text_with_summary',
-    'comment',
-    'email',
-    'link',
-  ];
-
-  /**
-   * Fields that may be used in complex fields to store values.
-   */
-  public $field_value_fields = [
-    'value',
-    'summary',
-    'uri',
-    'title',
-  ];
-
   /**
    * A flag to disable decryption if we are in the process of updating stored
    * fields.
@@ -63,11 +21,11 @@ class FieldEncryptProcessEntities {
   protected $updatingStoredField = 'none';
 
   /**
-   * Encryption service.
+   * Field Encrypt Map Plugin Manager
    *
-   * @var \Drupal\encrypt\EncryptService
+   * @var \Drupal\field_encrypt\FieldEncryptMapPluginManager
    */
-  protected $encryptService;
+  protected $fieldEncryptMapPluginManager;
 
   /**
    * Query Factory
@@ -84,14 +42,34 @@ class FieldEncryptProcessEntities {
   protected $entityManager;
 
   /**
-   * @param \Drupal\encrypt\EncryptService $encrypt_service
+   *
+   */
+  protected $fieldEncryptMap;
+
+  /**
+   * @param \Drupal\field_encrypt\FieldEncryptMapPluginManager $field_encrypt_map_plugin_manager
    * @param \Drupal\Core\Entity\Query\QueryFactory $query_factory
    * @param \Drupal\Core\Entity\EntityManager $entity_manager
    */
-  public function __construct(EncryptService $encrypt_service, QueryFactory $query_factory, EntityManager $entity_manager) {
-    $this->encryptService = $encrypt_service;
+  public function __construct(FieldEncryptMapPluginManager $field_encrypt_map_plugin_manager, QueryFactory $query_factory, EntityManager $entity_manager) {
+    $this->fieldEncryptMapPluginManager = $field_encrypt_map_plugin_manager;
     $this->queryFactory = $query_factory;
     $this->entityManager = $entity_manager;
+  }
+
+  /**
+   * Create a map of fields to services using our FieldEncryptMap plugins.
+   */
+  protected function getFieldEncryptMap() {
+    if (!is_array($this->fieldEncryptMap)){
+      $this->fieldEncryptMap = [];
+
+      foreach ($this->fieldEncryptMapPluginManager->getDefinitions() as $map_id => $map_info) {
+        $this->fieldEncryptMap += $this->fieldEncryptMapPluginManager->createInstance($map_id)->getMap();
+      }
+    }
+
+    return $this->fieldEncryptMap;
   }
 
   /**
@@ -116,20 +94,21 @@ class FieldEncryptProcessEntities {
    * Encrypt or Decrypt a value.
    *
    * @param string $value
+   * @param $service
    * @param string $op
    * @return string
    */
-  protected function process_value($value = '', $op = 'encrypt') {
+  protected function process_value($value = '', $service, $op = 'encrypt') {
     // Do not modify empty strings.
     if ($value === ''){
       return '';
     }
 
     if ($op === 'encrypt') {
-      return $this->encryptService->encrypt($value);
+      return $service->encrypt($value);
     }
     elseif ($op === 'decrypt') {
-      return $this->encryptService->decrypt($value);
+      return $service->decrypt($value);
     }
     else {
       return '';
@@ -155,10 +134,12 @@ class FieldEncryptProcessEntities {
       return;
     }
 
+    $field_type = $definition->get('field_type');
+
     /**
-     * Filter (blacklist) field types that don't work with encryption.
+     * Filter out fields that do not have a defined map.
      */
-    if (in_array($definition->get('field_type'), $this->blacklist_fields)) {
+    if (!in_array($field_type, array_keys($this->getFieldEncryptMap()))) {
       return;
     }
 
@@ -196,9 +177,10 @@ class FieldEncryptProcessEntities {
     $field_value = $field->getValue();
     foreach($field_value as &$value) {
       // Process each of the sub fields that exits.
-      foreach($this->field_value_fields as $field_name) {
-        if(isset($value[$field_name])){
-          $value[$field_name] = $this->process_value($value[$field_name], $op);
+      $map = $this->fieldEncryptMap[$field_type];
+      foreach($map as $value_name => $service) {
+        if(isset($value[$value_name])){
+          $value[$value_name] = $this->process_value($value[$value_name], $service, $op);
         }
       }
     }
