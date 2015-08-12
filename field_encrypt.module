@@ -46,16 +46,33 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
  */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
 
+  $form_encryption = $form_state->getValue('encrypt');
+  $original_encryption = $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt');
+
   // If the form has the value, we set it.
-  if ($form_state->getValue('encrypt')) {
-    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_state->getValue('encrypt'));
-
-    // TODO: We need to process the field to either batch encrypt or batch decrypt if the setting was changed.
-
+  if ($form_encryption === 1) {
+    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_encryption);
   }
   else {
     // If there is no value, remove.
     $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
+  }
+
+  if ($original_encryption !== $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt')) {
+    // We need to process the field to either encrypt or decrypt the stored fields if the setting was changed.
+    $field_name = $fieldStorageConfig->get('field_name');
+    $field_entity_type = $fieldStorageConfig->get('entity_type');
+
+    /**
+     * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+     */
+    $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+    if ($form_encryption === 1) {
+      $field_encrypt_process_entities->encrypt_stored_field($field_entity_type, $field_name);
+    }
+    elseif ($form_encryption === 0) {
+      $field_encrypt_process_entities->decrypt_stored_field($field_entity_type, $field_name);
+    }
   }
 }
 
@@ -66,8 +83,11 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
  */
 function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entity) {
   if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {return;}
+  /**
+   * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+   */
   $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
-  $field_encrypt_process_entities->encrypt_fields($entity);
+  $field_encrypt_process_entities->encrypt_entity($entity);
 }
 
 /**
@@ -77,14 +97,13 @@ function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entit
  * @param $entity_type
  */
 function field_encrypt_entity_load($entities, $entity_type) {
+  /**
+   * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
+   */
   $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
 
   foreach($entities as &$entity) {
     if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {continue;}
-    $field_encrypt_process_entities->decrypt_fields($entity);
+    $field_encrypt_process_entities->decrypt_entity($entity);
   }
 }
-
-
-
-
