@@ -273,6 +273,7 @@ class FieldEncryptProcessEntities {
 
     // The field is not null.
     $query->condition($field_name, NULL, '<>');
+    $query->allRevisions();
     $entity_ids = $query->execute();
 
     // Load entities.
@@ -281,11 +282,11 @@ class FieldEncryptProcessEntities {
      */
     $entity_storage = $this->entityManager->getStorage($entity_type);
 
-    foreach($entity_ids as $eid) {
+    foreach($entity_ids as $revision_id => $entity_id) {
       /**
        * @var $entity \Drupal\Core\Entity\Entity
        */
-      $entity = $entity_storage->load($eid);
+      $entity = $entity_storage->loadRevision($revision_id);
 
       /**
        * @var $field \Drupal\Core\Field\FieldItemList
