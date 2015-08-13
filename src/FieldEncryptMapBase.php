@@ -16,10 +16,4 @@ use Drupal\Core\Plugin\ContextAwarePluginBase;
  */
 abstract class FieldEncryptMapBase extends ContextAwarePluginBase implements FieldEncryptMapPluginInterface/*, ContainerInjectionInterface*/ {
 
-  protected $container;
-
-  public function __construct($configuration, $plugin_id, $plugin_definitions) {
-    parent::__construct($configuration, $plugin_id, $plugin_definitions);
-    $this->container = \Drupal::getContainer();
-  }
 }

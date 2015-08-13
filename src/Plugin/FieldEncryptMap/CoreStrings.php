@@ -21,14 +21,7 @@ class CoreStrings extends FieldEncryptMapBase {
   /**
    * @var $stringService
    */
-  public $stringService;
-
-  public function __construct($configuration, $plugin_id, $plugin_definitions) {
-    parent::__construct($configuration, $plugin_id, $plugin_definitions);
-
-    // The Encrypt modules string encryption service.
-    $this->stringService = $this->container->get('encryption');
-  }
+  public $stringService = 'encryption';
 
   /**
    * {@inheritdoc}

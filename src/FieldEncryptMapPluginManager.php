@@ -19,6 +19,10 @@ class FieldEncryptMapPluginManager extends DefaultPluginManager {
 
   /**
    * This is copied mostly from the DefaultPluginManager.
+   *
+   * @param \Traversable $namespaces
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache_backend
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    */
   public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler) {
     parent::__construct('Plugin/FieldEncryptMap', $namespaces, $module_handler, 'Drupal\field_encrypt\FieldEncryptMapPluginInterface', 'Drupal\field_encrypt\Annotation\FieldEncryptMap');

@@ -7,8 +7,8 @@ namespace Drupal\field_encrypt;
 
 use Drupal\Core\Entity\EntityManager;
 use Drupal\Core\Entity\Query\QueryFactory;
-use Drupal\encrypt\EncryptService;
-use Drupal\pants\Annotation\FieldEncryptMap;
+use Drupal\field_encrypt\Annotation\FieldEncryptMap;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  *
@@ -42,7 +42,14 @@ class FieldEncryptProcessEntities {
   protected $entityManager;
 
   /**
+   * Services Container
    *
+   * @var \Symfony\Component\DependencyInjection\ContainerInterface
+   */
+  protected $container;
+
+  /**
+   * Contains a mapping of field types to field values and services.
    */
   protected $fieldEncryptMap;
 
@@ -50,11 +57,13 @@ class FieldEncryptProcessEntities {
    * @param \Drupal\field_encrypt\FieldEncryptMapPluginManager $field_encrypt_map_plugin_manager
    * @param \Drupal\Core\Entity\Query\QueryFactory $query_factory
    * @param \Drupal\Core\Entity\EntityManager $entity_manager
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    */
-  public function __construct(FieldEncryptMapPluginManager $field_encrypt_map_plugin_manager, QueryFactory $query_factory, EntityManager $entity_manager) {
+  public function __construct(FieldEncryptMapPluginManager $field_encrypt_map_plugin_manager, QueryFactory $query_factory, EntityManager $entity_manager, ContainerInterface $container) {
     $this->fieldEncryptMapPluginManager = $field_encrypt_map_plugin_manager;
     $this->queryFactory = $query_factory;
     $this->entityManager = $entity_manager;
+    $this->container = $container;
   }
 
   /**
@@ -94,15 +103,17 @@ class FieldEncryptProcessEntities {
    * Encrypt or Decrypt a value.
    *
    * @param string $value
-   * @param $service
+   * @param $service_name
    * @param string $op
    * @return string
    */
-  protected function process_value($value = '', $service, $op = 'encrypt') {
+  protected function process_value($value = '', $service_name, $op = 'encrypt') {
     // Do not modify empty strings.
     if ($value === ''){
       return '';
     }
+
+    $service = $this->container->get($service_name);
 
     if ($op === 'encrypt') {
       return $service->encrypt($value);
