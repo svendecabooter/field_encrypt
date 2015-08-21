@@ -34,15 +34,6 @@ class FieldEncryptProcessEntitiesServiceTest extends UnitTestCase {
   ];
 
   /**
-   * A test map that would be provided by plugins.
-   */
-  public $testMap = [
-    'text' => [
-      'value' => 'mock.service',
-    ],
-  ];
-
-  /**
    * Our test field.
    */
   public $field;
@@ -137,13 +128,31 @@ class FieldEncryptProcessEntitiesServiceTest extends UnitTestCase {
     $plugin_manager->expects($this->any())->method('getDefinitions')
       ->willReturn(['mockMap' => []]);
 
+    // An Encryption service mock.
+    $encrypt_service = $this->getMockBuilder('stdClass')
+      ->setMethods(['encrypt', 'decrypt'])
+      ->getMock();
+
+    $encrypt_service->expects($this->any())->method('encrypt')
+      ->willReturn('encrypted value');
+
+    $encrypt_service->expects($this->any())->method('decrypt')
+      ->willReturn('decrypted value');
+
+    // A test map that would be provided by plugins.
+    $testMap = [
+      'text' => [
+        'value' => $encrypt_service,
+      ],
+    ];
+
     // Field Encrypt Map Plugin mock.
     $field_encrypt_map = $this->getMockBuilder('\Drupal\pants\FieldEncryptMapBase')
       ->setMethods(['getMap'])
       ->getMock();
 
     $field_encrypt_map->expects($this->any())->method('getMap')
-      ->willReturn($this->testMap);
+      ->willReturn($testMap);
 
     $plugin_manager->expects($this->any())->method('createInstance')
       ->willReturn($field_encrypt_map);
@@ -180,26 +189,8 @@ class FieldEncryptProcessEntitiesServiceTest extends UnitTestCase {
     $entity_manager->expects($this->any())->method('getStorage')
       ->willReturn($entity_storage);
 
-    // An Encryption service mock.
-    $encrypt_service = $this->getMockBuilder('stdClass')
-      ->setMethods(['encrypt', 'decrypt'])
-      ->getMock();
-
-    $encrypt_service->expects($this->any())->method('encrypt')
-      ->willReturn('encrypted value');
-
-    $encrypt_service->expects($this->any())->method('decrypt')
-      ->willReturn('decrypted value');
-
-    // Service Container mock that will return our single mock service.
-    $container = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerInterface')
-      ->getMock();
-
-    $container->expects($this->any())->method('get')
-      ->willReturn($encrypt_service);
-
     // Store an instance of our service.
-    $this->service = new FieldEncryptProcessEntities($plugin_manager, $query_factory, $entity_manager, $container);
+    $this->service = new FieldEncryptProcessEntities($plugin_manager, $query_factory, $entity_manager);
   }
 
   /**

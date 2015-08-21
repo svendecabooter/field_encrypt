@@ -14,6 +14,6 @@ use Drupal\Core\Plugin\ContextAwarePluginBase;
  *
  * @package Drupal\field_encrypt
  */
-abstract class FieldEncryptMapBase extends ContextAwarePluginBase implements FieldEncryptMapPluginInterface/*, ContainerInjectionInterface*/ {
+abstract class FieldEncryptMapBase extends ContextAwarePluginBase implements FieldEncryptMapPluginInterface {
 
 }
