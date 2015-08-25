@@ -94,7 +94,7 @@ install:
 
 before_script:
   # Manually enable encrypt module
-  - drupal_ti_ensure_drupal
+  #- drupal_ti_ensure_drupal
   - cd "$DRUPAL_TI_DRUPAL_DIR"
   - git clone git@github.com:d8-contrib-modules/encrypt.git modules/encrypt
   # Run standard drupal-ti script
