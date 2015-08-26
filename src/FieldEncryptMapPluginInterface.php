@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\Core\Block\FieldEncryptMapPluginInterface.
+ * Contains \Drupal\field_encrypt\FieldEncryptMapPluginInterface.
  */
 
 namespace Drupal\field_encrypt;
