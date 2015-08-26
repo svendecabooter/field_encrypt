@@ -94,8 +94,6 @@ install:
 
 before_script:
   # We run our script to add module dependencies
-  # This uses git clone over HTTPS because the modules don't currently
-  # exist on drupal.org.
   - drupal-ti --include drupal_ti/before/before_script.sh
   - drupal-ti before_script
 
