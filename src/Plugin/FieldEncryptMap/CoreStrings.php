@@ -7,7 +7,8 @@
 namespace Drupal\field_encrypt\Plugin\FieldEncryptMap;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\field_encrypt\FieldEncryptMapBase;
+use Drupal\encrypt\EncryptionProfileManagerInterface;
+use Drupal\field_encrypt\FieldEncryptMapEncryptBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -18,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Core Strings")
  * )
  */
-class CoreStrings extends FieldEncryptMapBase implements ContainerFactoryPluginInterface {
+class CoreStrings extends FieldEncryptMapEncryptBase implements ContainerFactoryPluginInterface {
 
   /**
    * @var $stringService
@@ -28,34 +29,55 @@ class CoreStrings extends FieldEncryptMapBase implements ContainerFactoryPluginI
    */
   public $stringService;
 
+  // @TODO: document extra parameter
+  // @TODO: typehint extra parameter
   /**
-   * @param array $configuration
-   * @param string $plugin_id
-   * @param mixed $plugin_definition
-   * @param $encryption
+   * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, $encryption) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EncryptionProfileManagerInterface $encryption_profile_manager, $encryption) {
     // Call parent construct method.
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $encryption_profile_manager);
     $this->stringService = $encryption;
   }
 
   /**
-   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
-   * @param array $configuration
-   * @param string $plugin_id
-   * @param mixed $plugin_definition
-   * @return static
+   * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
       $configuration,
       $plugin_id,
       $plugin_definition,
+      $container->get('encrypt.encryption_profile.manager'),
       // We inject our service here.
       $container->get('encryption')
     );
+  }
+
+  /**
+   * // @TODO
+   * {@inheritdoc}
+   */
+  public function encrypt($value, $settings) {
+    if (!empty($settings) && isset($settings['encryption_profile'])) {
+      $encryption_profile = $this->encryptionProfileManager->getEncryptionProfile($settings['encryption_profile']);
+      if ($encryption_profile) {
+        return base64_encode($this->stringService->encrypt($value, $encryption_profile));
+      }
+    }
+  }
+
+  /**
+   * // @TODO
+   * {@inheritdoc}
+   */
+  public function decrypt($value, $settings) {
+    if (!empty($settings) && isset($settings['encryption_profile'])) {
+      $encryption_profile = $this->encryptionProfileManager->getEncryptionProfile($settings['encryption_profile']);
+      if ($encryption_profile) {
+        return $this->stringService->decrypt(base64_decode($value), $encryption_profile);
+      }
+    }
   }
 
   /**
@@ -64,24 +86,24 @@ class CoreStrings extends FieldEncryptMapBase implements ContainerFactoryPluginI
   public function getMap() {
     return [
       'string' => [
-        'value' => $this->stringService,
+        'value' => $this,
       ],
       'text' => [
-        'value' => $this->stringService,
+        'value' => $this,
       ],
       'text_with_summary' => [
-        'value' => $this->stringService,
-        'summary' => $this->stringService,
+        'value' => $this,
+        'summary' => $this,
       ],
       'comment' => [
-        'value' => $this->stringService,
+        'value' => $this,
       ],
       'email' => [
-        'value' => $this->stringService,
+        'value' => $this,
       ],
       'link' => [
-        'uri' => $this->stringService,
-        'title' => $this->stringService,
+        'uri' => $this,
+        'title' => $this,
       ],
     ];
   }

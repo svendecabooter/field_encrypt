@@ -7,12 +7,16 @@
 
 namespace Drupal\field_encrypt;
 
+use Drupal\Component\Plugin\ConfigurablePluginInterface;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Plugin\PluginFormInterface;
+
 /**
  * This interface describes how field_encrypt plugins should be structured.
  *
  * @package Drupal\field_encrypt
  */
-interface FieldEncryptMapPluginInterface {
+interface FieldEncryptMapPluginInterface extends ConfigurablePluginInterface, ContainerFactoryPluginInterface, PluginFormInterface {
 
   /**
    * @return array An array of field types that contains an array of field values and associated encryption services.
@@ -20,5 +24,19 @@ interface FieldEncryptMapPluginInterface {
    * See \Drupal\field_encrypt\Plugin\FieldEncryptMap\CoreStrings for an example.
    */
   public function getMap();
+
+  /**
+   * @param $value
+   * @param $settings
+   * @return mixed
+   */
+  public function decrypt($value, $settings);
+
+  /**
+   * @param $value
+   * @param $settings
+   * @return mixed
+   */
+  public function encrypt($value, $settings);
 
 }

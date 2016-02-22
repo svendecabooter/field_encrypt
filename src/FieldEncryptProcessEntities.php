@@ -8,6 +8,7 @@ namespace Drupal\field_encrypt;
 use Drupal\Core\Entity\EntityManager;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\field_encrypt\Annotation\FieldEncryptMap;
+use Drupal\field_encrypt\FieldEncryptMapPluginInterface;
 
 /**
  *
@@ -93,24 +94,27 @@ class FieldEncryptProcessEntities {
    * Encrypt or Decrypt a value.
    *
    * @param string $value
-   * @param $service_name
+   * @param \Drupal\field_encrypt\FieldEncryptMapPluginInterface $field_encrypt_map
+   * @param array $field_encrypt_settings
    * @param string $op
    * @return string
    *
    * TODO: If we can rely on the encrypt module providing an interface,
    * we can include that here.
    */
-  protected function process_value($value = '', $service, $op = 'encrypt') {
+  protected function process_value($value = '', FieldEncryptMapPluginInterface $field_encrypt_map, $field_encrypt_settings = [], $op = 'encrypt') {
     // Do not modify empty strings.
     if ($value === ''){
       return '';
     }
 
+    $encryption_profile = NULL;
+
     if ($op === 'encrypt') {
-      return $service->encrypt($value);
+      return $field_encrypt_map->encrypt($value, $field_encrypt_settings);
     }
     elseif ($op === 'decrypt') {
-      return $service->decrypt($value);
+      return $field_encrypt_map->decrypt($value, $field_encrypt_settings);
     }
     else {
       return '';
@@ -173,6 +177,8 @@ class FieldEncryptProcessEntities {
       }
     }
 
+    $field_encrypt_settings = $storage->getThirdPartySetting('field_encrypt', 'settings', []);
+
     /**
      * @var $field \Drupal\Core\Field\FieldItemList
      */
@@ -180,9 +186,9 @@ class FieldEncryptProcessEntities {
     foreach($field_value as &$value) {
       // Process each of the sub fields that exits.
       $map = $this->fieldEncryptMap[$field_type];
-      foreach($map as $value_name => $service) {
+      foreach($map as $value_name => $field_encrypt_map) {
         if(isset($value[$value_name])){
-          $value[$value_name] = $this->process_value($value[$value_name], $service, $op);
+          $value[$value_name] = $this->process_value($value[$value_name], $field_encrypt_map, $field_encrypt_settings, $op);
         }
       }
     }

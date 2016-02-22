@@ -23,12 +23,35 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
       $field = $form_state->getFormObject()->getEntity();
 
       // Add our encrypted field to the form.
-      $form['encrypt'] = [
+      $form['field_encrypt'] = array(
+        '#type' => 'container',
+        '#title' => t('Field encryption'),
+        '#title_display' => FALSE,
+        '#tree' => TRUE,
+      );
+
+      $form['field_encrypt']['encrypt'] = [
         '#type' => 'checkbox',
         '#title' => t('Encrypted'),
         '#description' => t('Makes the field storage encrypted.'),
         '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
       ];
+
+      $form['field_encrypt']['settings'] = array(
+        '#type' => 'container',
+        '#title' => t('Settings'),
+        '#title_display' => FALSE,
+        '#tree' => TRUE,
+      );
+      //@TODO: get FieldEncryptMap plugin dynamically or through settings
+      $field_encrypt_map_id = "core_strings";
+
+      $configuration = $field->getThirdPartySetting('field_encrypt', 'settings', FALSE);
+      $field_encrypt_map = \Drupal::service('plugin.manager.field_encrypt.field_encrypt_map')->createInstance($field_encrypt_map_id, $configuration);
+      //@TODO: implement?
+      //$plugin_form_state = $this->createPluginFormState('key_type', $form_state);
+      $form['field_encrypt']['settings'] += $field_encrypt_map->buildConfigurationForm([], $form_state);
+      //$form_state->setValue(array('field_encrypt', 'settings'), $form_state ->getValues());
 
       // We add a function to process the form when it is saved.
       $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
@@ -45,20 +68,25 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  //@TODO: get FieldEncryptMap plugin dynamically or through settings
+  $field_encrypt_map_id = "core_strings";
 
-  $form_encryption = $form_state->getValue('encrypt');
-  $original_encryption = $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt');
+  $field_encryption_settings = $form_state->getValue('field_encrypt');
+  $form_encryption = $field_encryption_settings['encrypt'];
+  $original_encryption = $fieldStorageConfig->getThirdPartySettings('field_encrypt');
 
   // If the form has the value, we set it.
   if ($form_encryption === 1) {
-    $fieldStorageConfig->setThirdPartySetting('field_encrypt', 'encrypt', $form_encryption);
+    foreach ($field_encryption_settings as $settings_key => $settings_value) {
+      $fieldStorageConfig->setThirdPartySetting('field_encrypt', $settings_key, $settings_value);
+    }
   }
   else {
     // If there is no value, remove.
-    $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
+    $fieldStorageConfig->unsetThirdPartySettings('field_encrypt');
   }
 
-  if ($original_encryption !== $fieldStorageConfig->getThirdPartySetting('field_encrypt', 'encrypt')) {
+  if ($original_encryption !== $fieldStorageConfig->getThirdPartySettings('field_encrypt')) {
     // We need to process the field to either encrypt or decrypt the stored fields if the setting was changed.
     $field_name = $fieldStorageConfig->get('field_name');
     $field_entity_type = $fieldStorageConfig->get('entity_type');
