@@ -44,10 +44,10 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
         '#tree' => TRUE,
       );
       //@TODO: get FieldEncryptMap plugin dynamically or through settings
-      $field_encrypt_map_id = "core_strings";
+      $provider_id = "core_strings";
 
       $configuration = $field->getThirdPartySetting('field_encrypt', 'settings', FALSE);
-      $field_encrypt_map = \Drupal::service('plugin.manager.field_encrypt.field_encrypt_map')->createInstance($field_encrypt_map_id, $configuration);
+      $field_encrypt_map = \Drupal::service('plugin.manager.field_encrypt.field_encrypt_map')->createInstance($provider_id, $configuration);
       //@TODO: implement?
       //$plugin_form_state = $this->createPluginFormState('key_type', $form_state);
       $form['field_encrypt']['settings'] += $field_encrypt_map->buildConfigurationForm([], $form_state);
@@ -69,7 +69,7 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
  */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   //@TODO: get FieldEncryptMap plugin dynamically or through settings
-  $field_encrypt_map_id = "core_strings";
+  $provider_id = "core_strings";
 
   $field_encryption_settings = $form_state->getValue('field_encrypt');
   $form_encryption = $field_encryption_settings['encrypt'];

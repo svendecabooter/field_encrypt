@@ -1,9 +1,9 @@
 services:
   field_encrypt.process_entities:
     class: Drupal\field_encrypt\FieldEncryptProcessEntities
-    arguments: ['@plugin.manager.field_encrypt.field_encrypt_map', '@entity.query', '@entity.manager']
+    arguments: ['@plugin.manager.field_encrypt.provider_manager', '@entity.query', '@entity.manager']
 
-  # This service will provide a way to access the FieldEncryptMap plugins.
-  plugin.manager.field_encrypt.field_encrypt_map:
-    class: Drupal\field_encrypt\FieldEncryptMapPluginManager
+  # This service will provide a way to access the FieldEncryptionProvider plugins.
+  plugin.manager.field_encrypt.provider_manager:
+    class: Drupal\field_encrypt\FieldEncryptionProviderPluginManager
     parent: default_plugin_manager

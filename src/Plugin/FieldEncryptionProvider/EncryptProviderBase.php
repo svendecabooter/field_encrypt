@@ -1,25 +1,27 @@
 <?php
 /**
  * @file
- * Contains \Drupal\field_encrypt\FieldEncryptMapEncryptBase.
+ * Contains
+ * \Drupal\field_encrypt\Plugin\FieldEncryptionProvider\EncryptProviderBase.
  */
 
-namespace Drupal\field_encrypt;
+namespace Drupal\field_encrypt\Plugin\FieldEncryptionProvider;
 
 use Drupal\Core\Form\FormStateInterface;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\field_encrypt\FieldEncryptMapBase;
+use Drupal\field_encrypt\FieldEncryptionProviderBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
+use Drupal\encrypt\EncryptServiceInterface;
 
 /**
- * Provides a base Field Encrypt Map class that integrates with Encrypt service.
+ * A base FieldEncryptionProvider class that integrates with Encrypt service.
  *
- * Use this base class when defining FieldEncryptMap plugins that rely on the
- * Encrypt module EncryptService.
+ * Use this base class when defining FieldEncryptionProvider plugins that rely
+ * on the Encrypt module EncryptService.
  */
-abstract class FieldEncryptMapEncryptBase extends FieldEncryptMapBase {
+abstract class EncryptProviderBase extends FieldEncryptionProviderBase {
 
   /**
    * The EncryptionProfileManager service.
@@ -29,12 +31,22 @@ abstract class FieldEncryptMapEncryptBase extends FieldEncryptMapBase {
   protected $encryptionProfileManager;
 
   /**
-   * {@inheritdoc}
+   * The encryption service.
+   *
+   * @var \Drupal\encrypt\EncryptServiceInterface
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EncryptionProfileManagerInterface $encryption_profile_manager) {
+  protected $encryptService;
+
+  /**
+   * {@inheritdoc}
+   * @param \Drupal\encrypt\EncryptionProfileManagerInterface
+   * @param \Drupal\encrypt\EncryptServiceInterface $encrypt_service
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EncryptionProfileManagerInterface $encryption_profile_manager, EncryptServiceInterface $encrypt_service) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->configuration += $this->defaultConfiguration();
     $this->encryptionProfileManager = $encryption_profile_manager;
+    $this->encryptService = $encrypt_service;
   }
 
   /**
@@ -45,7 +57,8 @@ abstract class FieldEncryptMapEncryptBase extends FieldEncryptMapBase {
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('encrypt.encryption_profile.manager')
+      $container->get('encrypt.encryption_profile.manager'),
+      $container->get('encryption')
     );
   }
 
@@ -108,4 +121,5 @@ abstract class FieldEncryptMapEncryptBase extends FieldEncryptMapBase {
   public function calculateDependencies() {
     return array();
   }
+
 }

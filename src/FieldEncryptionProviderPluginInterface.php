@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\field_encrypt\FieldEncryptMapPluginInterface.
+ * Contains \Drupal\field_encrypt\FieldEncryptionProviderPluginInterface.
  */
 
 namespace Drupal\field_encrypt;
@@ -16,12 +16,12 @@ use Drupal\Core\Plugin\PluginFormInterface;
  *
  * @package Drupal\field_encrypt
  */
-interface FieldEncryptMapPluginInterface extends ConfigurablePluginInterface, ContainerFactoryPluginInterface, PluginFormInterface {
+interface FieldEncryptionProviderPluginInterface extends ConfigurablePluginInterface, ContainerFactoryPluginInterface, PluginFormInterface {
 
   /**
    * @return array An array of field types that contains an array of field values and associated encryption services.
    *
-   * See \Drupal\field_encrypt\Plugin\FieldEncryptMap\CoreStrings for an example.
+   * See \Drupal\field_encrypt\Plugin\FieldEncryptionProvider\CoreStrings for an example.
    */
   public function getMap();
 
