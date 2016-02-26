@@ -52,8 +52,16 @@ class FieldEncryptionProviderPluginManager extends DefaultPluginManager {
    * @return array
    */
   public function getProvidersForFieldType($field_type) {
+    $providers = [];
     $definitions = $this->getDefinitions();
-    return [];
+    foreach ($definitions as $provider => $definition) {
+      if (isset($definition['field_types'])) {
+        if (in_array($field_type, array_keys($definition['field_types']))) {
+          $providers[$provider] = $definition['label'];
+        }
+      }
+    }
+    return $providers;
   }
 
 }

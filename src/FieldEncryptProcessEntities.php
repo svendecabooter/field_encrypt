@@ -153,33 +153,33 @@ class FieldEncryptProcessEntities {
       }
     }
 
-    $field_encrypt_settings = $storage->getThirdPartySetting('field_encrypt', 'settings', []);
-
     /**
      * @var $field \Drupal\Core\Field\FieldItemList
      */
     $field_value = $field->getValue();
-    //$providers = $this->providerPluginManager->getProvidersForFieldType($field_type);
-    //$provider_id = $field_encrypt_settings['provider_id'];
-    $provider_id = 'core_strings';
+    $provider_id = $storage->getThirdPartySetting('field_encrypt', 'provider_id', FALSE);
     // @TODO: improve --> getInstance($options)?
-    $field_encryption_provider = $this->providerPluginManager->createInstance($provider_id);
+    // Check if there is a provider set for this field.
+    if ($provider_id) {
+      $field_encryption_provider = $this->providerPluginManager->createInstance($provider_id);
 
-    if ($field_encryption_provider) {
-      $properties = $field_encryption_provider->getPropertiesToEncrypt($field_type);
-      foreach ($field_value as &$value) {
-        // Process each of the field properties that exist.
-        foreach ($properties as $property_name) {
-          if(isset($value[$property_name])){
-            $value[$property_name] = $this->process_value($value[$property_name], $field_encryption_provider, $field_encrypt_settings, $op);
+      if ($field_encryption_provider) {
+        $field_encrypt_settings = $storage->getThirdPartySetting('field_encrypt', 'provider_settings', []);
+        // Process the field with the given encryption provider.
+        $properties = $field_encryption_provider->getPropertiesToEncrypt($field_type);
+        foreach ($field_value as &$value) {
+          // Process each of the field properties that exist.
+          foreach ($properties as $property_name) {
+            if(isset($value[$property_name])){
+              $value[$property_name] = $this->process_value($value[$property_name], $field_encryption_provider, $field_encrypt_settings, $op);
+            }
           }
         }
+        // Set the new value.
+        // We don't need to update the entity because setValue does that already.
+        $field->setValue($field_value);
       }
-      // Set the new value.
-      // We don't need to update the entity because the field setValue does that already.
-      $field->setValue($field_value);
     }
-
   }
 
   /**

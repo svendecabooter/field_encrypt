@@ -19,13 +19,6 @@ use Drupal\Core\Plugin\PluginFormInterface;
 interface FieldEncryptionProviderPluginInterface extends ConfigurablePluginInterface, ContainerFactoryPluginInterface, PluginFormInterface {
 
   /**
-   * @return array An array of field types that contains an array of field values and associated encryption services.
-   *
-   * See \Drupal\field_encrypt\Plugin\FieldEncryptionProvider\CoreStrings for an example.
-   */
-  public function getMap();
-
-  /**
    * @param $value
    * @param $settings
    * @return mixed

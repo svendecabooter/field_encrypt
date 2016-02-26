@@ -1,8 +1,8 @@
 <?php
+
 /**
  * @file
- * Contains
- * \Drupal\field_encrypt\Plugin\FieldEncryptionProvider\EncryptProviderBase.
+ * Contains \Drupal\field_encrypt\Plugin\FieldEncryptionProvider\EncryptProviderBase.
  */
 
 namespace Drupal\field_encrypt\Plugin\FieldEncryptionProvider;

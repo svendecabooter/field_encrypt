@@ -20,7 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Core string fields"),
  *   field_types = {
  *     "string" = {"value"},
+ *     "string_long" = {"value"},
  *     "text" = {"value"},
+ *     "text_long" = {"value"},
  *     "text_with_summary" = {"value", "summary"},
  *     "comment" = {"value"},
  *     "email" = {"value"},
@@ -76,11 +78,4 @@ class CoreStrings extends EncryptProviderBase implements ContainerFactoryPluginI
     }
   }
 
-  /**
-   * // @TODO: delete?
-   * {@inheritdoc}
-   */
-  public function getMap() {
-    return $this->getPluginDefinition()['field_types'];
-  }
 }
