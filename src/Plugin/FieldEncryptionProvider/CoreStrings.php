@@ -32,28 +32,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class CoreStrings extends EncryptProviderBase implements ContainerFactoryPluginInterface {
 
-//  /**
-//   * {@inheritdoc}
-//   */
-//  public function __construct(array $configuration, $plugin_id, $plugin_definition, EncryptionProfileManagerInterface $encryption_profile_manager, EncryptServiceInterface $encrypt_service) {
-//    // Call parent construct method.
-//    parent::__construct($configuration, $plugin_id, $plugin_definition, $encryption_profile_manager, $encrypt_service);
-//  }
-//
-//  /**
-//   * {@inheritdoc}
-//   */
-//  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-//    return new static(
-//      $configuration,
-//      $plugin_id,
-//      $plugin_definition,
-//      $container->get('encrypt.encryption_profile.manager'),
-//      // We inject our service here.
-//      $container->get('encryption')
-//    );
-//  }
-
   /**
    * {@inheritdoc}
    */
