@@ -8,9 +8,17 @@ use Drupal\Core\Form\FormStateInterface;
 /**
  * Implements hook_form_alter.
  *
- * Add a field to the field storage configuration forms to allow setting the encryption state.
+ * Adds settings to the field storage configuration forms to allow setting the
+ * encryption state.
+ *
+ * @param array $form
+ *   The complete form array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current state of the form.
+ * @param string $form_id
+ *   The form ID.
  */
-function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_id) {
 
   // If this is the add or edit form for field_storage, we call our function.
   if (in_array($form_id, ['field_storage_add_form', 'field_storage_config_edit_form'])) {
@@ -19,130 +27,68 @@ function field_encrypt_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $
     $user = \Drupal::currentUser();
 
     if ($user->hasPermission('administer field encryption')) {
-      /**
-       * @var $field \Drupal\field\Entity\FieldStorageConfig
-       */
+       /* @var $field \Drupal\field\Entity\FieldStorageConfig */
       $field = $form_state->getFormObject()->getEntity();
-      $provider_manager = \Drupal::service('plugin.manager.field_encrypt.provider_manager');
-      if ($valid_providers = $provider_manager->getProvidersForFieldType($field->getType())) {
-        $default_provider = NULL;
-        // Add field_encrypt form.
-        $form['field_encrypt'] = array(
-          '#type' => 'container',
-          '#title' => t('Field encryption'),
-          '#title_display' => FALSE,
-          '#tree' => TRUE,
-        );
+      $fieldSettings = \Drupal::service('field_encrypt.field_settings');
 
-        $form['field_encrypt']['encrypt'] = [
-          '#type' => 'checkbox',
-          '#title' => t('Encrypted'),
-          '#description' => t('Makes the field storage encrypted.'),
-          '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
-        ];
+      // Add container for field_encrypt specific settings.
+      $form['field_encrypt'] = array(
+        '#type' => 'details',
+        '#title' => t('Field encryption'),
+        '#open' => TRUE,
+      );
 
-        if (count($valid_providers) > 1) {
-          // If there is more than 1 valid provider, allow choosing one.
-          $default_provider = $field->getThirdPartySetting('field_encrypt', 'provider_id', FALSE);
-          $form['field_encrypt']['provider_id'] = [
-            '#type' => 'select',
-            '#title' => t('Provider'),
-            '#description' => t('Choose the encryption provider to encrypt this field.'),
-            '#options' => $valid_providers,
-            '#default_value' => $default_provider,
-            '#required' => TRUE,
-            '#ajax' => array(
-              'callback' => 'field_encrypt_ajax_update_settings',
-              'event' => 'change',
-              'wrapper' => 'provider-settings',
-            ),
-          ];
-        }
-        else {
-          // If there is only one, make it the default.
-          $valid_provider_ids = array_keys($valid_providers);
-          $default_provider = array_shift($valid_provider_ids);
-          $form['field_encrypt']['provider_id'] = [
-            '#type' => 'value',
-            '#value' => $default_provider,
-          ];
-        }
+      $form['field_encrypt']['field_encrypt'] = array(
+        '#type' => 'container',
+        '#tree' => TRUE,
+      );
 
-        // Add settings form for the provider.
-        $form['field_encrypt']['provider_settings'] = array(
-          '#type' => 'container',
-          '#title' => t('Settings'),
-          '#title_display' => FALSE,
-          '#tree' => TRUE,
-          '#prefix' => '<div id="provider-settings">',
-          '#suffix' => '</div>',
-        );
+      // Add setting to decide if field should be encrypted.
+      $form['field_encrypt']['field_encrypt']['encrypt'] = [
+        '#type' => 'checkbox',
+        '#title' => t('Encrypt field'),
+        '#description' => t('Makes the field storage encrypted.'),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
+      ];
 
-        $selected_provider_id = NULL;
-        $user_input = $form_state->getUserInput();
-        if ($user_input && isset($user_input['field_encrypt']['provider_id'])) {
-          $selected_provider_id = $user_input['field_encrypt']['provider_id'];
-        }
-        if (!$selected_provider_id) {
-          $selected_provider_id = $default_provider;
-        }
-        if ($selected_provider_id) {
-          $provider_settings = $field->getThirdPartySetting('field_encrypt', 'provider_settings', []);
-          $field_encrypt_provider = $provider_manager->createInstance($selected_provider_id, $provider_settings);
-          $plugin_form_state = field_encrypt_create_plugin_form_state($form_state);
-          $form['field_encrypt']['provider_settings'] += $field_encrypt_provider->buildConfigurationForm([], $plugin_form_state);
-          $form_state->setValue(array('field_encrypt', 'provider_settings'), $form_state ->getValues());
+      $form['field_encrypt']['field_encrypt']['properties'] = [
+        '#type' => 'select',
+        '#title' => t('Properties'),
+        '#description' => t('Specify the field properties to encrypt.'),
+        '#options' => $fieldSettings->getFieldProperties($field),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $fieldSettings->getDefaultProperties()),
+        '#required' => TRUE,
+        '#multiple' => TRUE,
+      ];
 
-          // We add a function to process the form when it is saved.
-          $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
-        }
-      }
+      $form['field_encrypt']['field_encrypt']['encryption_profile'] = array(
+        '#type' => 'select',
+        '#title' => t('Encryption profile'),
+        '#description' => t('Select the encryption profile to use for encrypting this field.'),
+        '#options' => $fieldSettings->getEncryptionProfiles(),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encryption_profile', FALSE),
+        '#required' => TRUE,
+      );
 
+      // We add a function to process the form when it is saved.
+      $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
     }
   }
 }
 
 /**
- * AJAX callback to update the dynamic settings on the form.
+ * Update the field storage configuration to set the encryption state.
  *
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig
+ *   The field storage config entity.
  * @param array $form
- *   The form definition array for the encryption profile form.
+ *   The complete form array.
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  *   The current state of the form.
  *
- * @return array
- *   The element to update in the form.
- */
-function field_encrypt_ajax_update_settings(array &$form, FormStateInterface $form_state) {
-  return $form['field_encrypt']['provider_settings'];
-}
-
-/**
- * Creates a FormStateInterface object for a plugin.
- *
- * @param FormStateInterface $form_state
- *   The form state to copy values from.
- *
- * @return FormStateInterface
- *   A clone of the form state object with values from the plugin.
- */
-function field_encrypt_create_plugin_form_state(FormStateInterface $form_state) {
-  // Clone the form state.
-  $plugin_form_state = clone $form_state;
-
-  // Clear the values, except for this plugin type's settings.
-  $plugin_form_state->setValues($form_state->getValue('encryption_method_configuration', []));
-
-  return $plugin_form_state;
-}
-
-/**
- * Update the field storage configuration to set the encryption state.
- *
- * @param $entity_type
- * @param \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig
- * @param $form
- * @param \Drupal\Core\Form\FormStateInterface $form_state
  */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $fieldStorageConfig, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   $field_encryption_settings = $form_state->getValue('field_encrypt');
