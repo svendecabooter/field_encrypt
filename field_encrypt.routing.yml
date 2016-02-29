@@ -1,0 +1,7 @@
+field_encrypt.settings:
+  path: '/admin/config/system/field_encrypt'
+  defaults:
+    _form: '\Drupal\field_encrypt\Form\FieldEncryptSettingsForm'
+    _title: 'Field Encrypt settings'
+  requirements:
+    _permission: 'administer field encryption'
