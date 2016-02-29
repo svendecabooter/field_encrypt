@@ -47,10 +47,10 @@ entity level. As such, the service primarily takes entities as inputs and
 processes those fields in order to either decrypt encrypted fields or encrypt 
 fields before storage.
 
-The `encrypt_entity()` and `decrypt_entity()` methods perform these actions. 
+The `encryptEntity()` and `decryptEntity()` methods perform these actions. 
 Additionally, after we have changed the storage settings (enabled / disabled
- encryption), we must process existing fields. `encrypt_stored_field()` and 
- `decrypt_stored_field()` provide that functionality.
+ encryption), we must process existing fields. `encryptStoredField()` and 
+ `decryptStoredField()` provide that functionality.
 
 Inside the service, we iterate over each field and then each of the fields 
 values. For example, the `text_with_summary` field type has a `value` and a 
@@ -99,4 +99,4 @@ the form submission which will respond to changes in the setting value.
 This way, when the setting is changed, we can process stored values and 
 encrypt / decrypt to match the new setting. This encryption / decryption is 
 handled by the `FieldEncryptProcessEntities` service with the 
-`encrypt_stored_field()` and `decrypt_stored_field()` methods.
+`encryptStoredField()` and `decryptStoredField()` methods.

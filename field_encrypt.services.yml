@@ -2,6 +2,3 @@ services:
   field_encrypt.process_entities:
     class: Drupal\field_encrypt\FieldEncryptProcessEntities
     arguments: ['@entity.query', '@entity.manager', '@encryption', '@encrypt.encryption_profile.manager']
-  field_encrypt.field_settings:
-    class: Drupal\field_encrypt\FieldEncryptFieldSettings
-    arguments: ['@encrypt.encryption_profile.manager']

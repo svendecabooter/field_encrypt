@@ -29,7 +29,6 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
     if ($user->hasPermission('administer field encryption')) {
        /* @var $field \Drupal\field\Entity\FieldStorageConfig */
       $field = $form_state->getFormObject()->getEntity();
-      $fieldSettings = \Drupal::service('field_encrypt.field_settings');
 
       // Add container for field_encrypt specific settings.
       $form['field_encrypt'] = array(
@@ -51,21 +50,29 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encrypt', FALSE),
       ];
 
+      $properties = [];
+      $definitions = $field->getPropertyDefinitions();
+      foreach ($definitions as $property => $definition) {
+        $properties[$property] = $definition->getLabel();
+      }
+
+      $default_properties = [];
+
       $form['field_encrypt']['field_encrypt']['properties'] = [
-        '#type' => 'select',
+        '#type' => 'checkboxes',
         '#title' => t('Properties'),
         '#description' => t('Specify the field properties to encrypt.'),
-        '#options' => $fieldSettings->getFieldProperties($field),
-        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $fieldSettings->getDefaultProperties()),
+        '#options' => $properties,
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $default_properties),
         '#required' => TRUE,
-        '#multiple' => TRUE,
       ];
 
+      $encryption_profile_manager = \Drupal::service('encrypt.encryption_profile.manager');
       $form['field_encrypt']['field_encrypt']['encryption_profile'] = array(
         '#type' => 'select',
         '#title' => t('Encryption profile'),
         '#description' => t('Select the encryption profile to use for encrypting this field.'),
-        '#options' => $fieldSettings->getEncryptionProfiles(),
+        '#options' => $encryption_profile_manager->getEncryptionProfileNamesAsOptions(),
         '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encryption_profile', FALSE),
         '#required' => TRUE,
       );
@@ -116,10 +123,10 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
      */
     $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
     if ($form_encryption === 1) {
-      $field_encrypt_process_entities->encrypt_stored_field($field_entity_type, $field_name);
+      $field_encrypt_process_entities->encryptStoredField($field_entity_type, $field_name);
     }
     elseif ($form_encryption === 0) {
-      $field_encrypt_process_entities->decrypt_stored_field($field_entity_type, $field_name);
+      $field_encrypt_process_entities->decryptStoredField($field_entity_type, $field_name);
     }
   }
 }
@@ -135,7 +142,7 @@ function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entit
    * @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities
    */
   $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
-  $field_encrypt_process_entities->encrypt_entity($entity);
+  $field_encrypt_process_entities->encryptEntity($entity);
 }
 
 /**
@@ -152,6 +159,6 @@ function field_encrypt_entity_load($entities, $entity_type) {
 
   foreach($entities as &$entity) {
     if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {continue;}
-    $field_encrypt_process_entities->decrypt_entity($entity);
+    $field_encrypt_process_entities->decryptEntity($entity);
   }
 }

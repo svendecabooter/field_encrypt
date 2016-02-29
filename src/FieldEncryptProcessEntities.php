@@ -78,8 +78,8 @@ class FieldEncryptProcessEntities {
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    */
-  public function encrypt_entity(ContentEntityInterface $entity) {
-    $this->process_entity($entity, 'encrypt');
+  public function encryptEntity(ContentEntityInterface $entity) {
+    $this->processEntity($entity, 'encrypt');
   }
 
   /**
@@ -87,8 +87,8 @@ class FieldEncryptProcessEntities {
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    */
-  public function decrypt_entity(ContentEntityInterface $entity) {
-    $this->process_entity($entity, 'decrypt');
+  public function decryptEntity(ContentEntityInterface $entity) {
+    $this->processEntity($entity, 'decrypt');
   }
 
   /**
@@ -104,7 +104,7 @@ class FieldEncryptProcessEntities {
    * @return string
    *   The processed value.
    */
-  protected function process_value($value = '', EncryptionProfileInterface $encryption_profile, $op = 'encrypt') {
+  protected function processValue($value = '', EncryptionProfileInterface $encryption_profile, $op = 'encrypt') {
     // Do not modify empty strings.
     if ($value === ''){
       return '';
@@ -133,7 +133,7 @@ class FieldEncryptProcessEntities {
    *   If set, we don't check if encryption is enabled, we process the field
    *   anyway. This is used during batch processes.
    */
-  protected function process_field(FieldItemListInterface $field, $op = 'encrypt', $force = FALSE) {
+  protected function processField(FieldItemListInterface $field, $op = 'encrypt', $force = FALSE) {
     if (!is_callable([$field, 'getFieldDefinition'])){return;}
 
     /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
@@ -180,7 +180,7 @@ class FieldEncryptProcessEntities {
       // Process each of the field properties that exist.
       foreach ($properties as $property_name) {
         if (isset($value[$property_name])) {
-          $value[$property_name] = $this->process_value($value[$property_name], $encryption_profile, $op);
+          $value[$property_name] = $this->processValue($value[$property_name], $encryption_profile, $op);
         }
       }
     }
@@ -199,14 +199,14 @@ class FieldEncryptProcessEntities {
    * @param string $op
    *   The operation to perform (encrypt / decrypt).
    */
-  protected function process_entity(ContentEntityInterface $entity, $op = 'encrypt') {
+  protected function processEntity(ContentEntityInterface $entity, $op = 'encrypt') {
     // Make sure we can get fields.
     if (!is_callable([$entity, 'getFields'])){
       return;
     }
 
     foreach ($entity->getFields() as $field){
-      $this->process_field($field, $op);
+      $this->processField($field, $op);
     }
   }
 
@@ -220,8 +220,8 @@ class FieldEncryptProcessEntities {
    * @param $field_name
    *   The name of the field to encrypt.
    */
-  public function encrypt_stored_field($entity_type, $field_name) {
-    $this->update_stored_field($entity_type, $field_name, 'encrypt');
+  public function encryptStoredField($entity_type, $field_name) {
+    $this->updateStoredField($entity_type, $field_name, 'encrypt');
   }
 
   /**
@@ -234,8 +234,8 @@ class FieldEncryptProcessEntities {
    * @param $field_name
    *   The name of the field to decrypt.
    */
-  public function decrypt_stored_field($entity_type, $field_name) {
-    $this->update_stored_field($entity_type, $field_name, 'decrypt');
+  public function decryptStoredField($entity_type, $field_name) {
+    $this->updateStoredField($entity_type, $field_name, 'decrypt');
   }
 
   /**
@@ -249,7 +249,7 @@ class FieldEncryptProcessEntities {
    * @param string $op
    *   The operation to perform (encrypt / decrypt).
    */
-  protected function update_stored_field($entity_type, $field_name, $op = 'encrypt') {
+  protected function updateStoredField($entity_type, $field_name, $op = 'encrypt') {
     /**
      * Before we load entities, we have to disable the encryption setting.
      * Otherwise, the act of loading the entity triggers an improper decryption
@@ -276,7 +276,7 @@ class FieldEncryptProcessEntities {
 
       /** @var $field \Drupal\Core\Field\FieldItemList */
       $field = $entity->get($field_name);
-      $this->process_field($field, $op, TRUE);
+      $this->processField($field, $op, TRUE);
 
       // Save the entity.
       $entity->save();
