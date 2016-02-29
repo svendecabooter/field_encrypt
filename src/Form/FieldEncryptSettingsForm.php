@@ -13,7 +13,6 @@ use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-use Drupal\Component\Serialization\Yaml;
 /**
  * Form builder for the field_encrypt settings admin page.
  */
@@ -68,8 +67,6 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
 
     $config = $this->config('field_encrypt.settings');
     $default_properties = $config->get('default_properties');
-
-    $test = Yaml::encode($default_properties);
 
     $form['default_properties'] = array(
       '#type' => 'container',
