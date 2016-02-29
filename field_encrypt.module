@@ -29,6 +29,8 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
     if ($user->hasPermission('administer field encryption')) {
        /* @var $field \Drupal\field\Entity\FieldStorageConfig */
       $field = $form_state->getFormObject()->getEntity();
+      $field_type = $field->getType();
+      $default_properties = \Drupal::config('field_encrypt.settings')->get('default_properties');
 
       // Add container for field_encrypt specific settings.
       $form['field_encrypt'] = array(
@@ -56,15 +58,17 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         $properties[$property] = $definition->getLabel();
       }
 
-      $default_properties = [];
-
       $form['field_encrypt']['field_encrypt']['properties'] = [
         '#type' => 'checkboxes',
         '#title' => t('Properties'),
         '#description' => t('Specify the field properties to encrypt.'),
         '#options' => $properties,
-        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $default_properties),
-        '#required' => TRUE,
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $default_properties[$field_type]),
+        '#states' => [
+          'visible' => [
+            ':input[name="field_encrypt[encrypt]"]' => array('checked' => TRUE),
+          ]
+        ]
       ];
 
       $encryption_profile_manager = \Drupal::service('encrypt.encryption_profile.manager');
@@ -74,7 +78,11 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         '#description' => t('Select the encryption profile to use for encrypting this field.'),
         '#options' => $encryption_profile_manager->getEncryptionProfileNamesAsOptions(),
         '#default_value' => $field->getThirdPartySetting('field_encrypt', 'encryption_profile', FALSE),
-        '#required' => TRUE,
+        '#states' => [
+          'visible' => [
+            ':input[name="field_encrypt[encrypt]"]' => array('checked' => TRUE),
+          ]
+        ]
       );
 
       // We add a function to process the form when it is saved.
@@ -109,8 +117,10 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
     }
   }
   else {
-    // If there is no value, remove.
-    $fieldStorageConfig->unsetThirdPartySettings('field_encrypt');
+    // If there is no value, remove third party settings.
+    $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encrypt');
+    $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'properties');
+    $fieldStorageConfig->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
   }
 
   if ($original_encryption !== $fieldStorageConfig->getThirdPartySettings('field_encrypt')) {
