@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Contains \Drupal\field_encrypt\FieldEncryptProcessEntities.
@@ -18,7 +19,7 @@ use Drupal\encrypt\EncryptServiceInterface;
 /**
  * Service class to process entities and fields for encryption.
  */
-class FieldEncryptProcessEntities {
+class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterface {
 
   /**
    * A flag to disable decryption if we are in the process of updating stored
@@ -74,18 +75,14 @@ class FieldEncryptProcessEntities {
   }
 
   /**
-   * Encrypt fields for an entity.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * {@inheritdoc}
    */
   public function encryptEntity(ContentEntityInterface $entity) {
     $this->processEntity($entity, 'encrypt');
   }
 
   /**
-   * Decrypt fields for an entity.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * {@inheritdoc}
    */
   public function decryptEntity(ContentEntityInterface $entity) {
     $this->processEntity($entity, 'decrypt');
@@ -210,29 +207,16 @@ class FieldEncryptProcessEntities {
     }
   }
 
+
   /**
-   * Encrypt stored fields.
-   *
-   * This is performed when field storage settings are updated.
-   *
-   * @param $entity_type
-   *   The entity type.
-   * @param $field_name
-   *   The name of the field to encrypt.
+   * {@inheritdoc}
    */
   public function encryptStoredField($entity_type, $field_name) {
     $this->updateStoredField($entity_type, $field_name, 'encrypt');
   }
 
   /**
-   * Decrypt stored fields.
-   *
-   * This is performed when field storage settings are updated.
-   *
-   * @param $entity_type
-   *   The entity type.
-   * @param $field_name
-   *   The name of the field to decrypt.
+   * {@inheritdoc}
    */
   public function decryptStoredField($entity_type, $field_name) {
     $this->updateStoredField($entity_type, $field_name, 'decrypt');

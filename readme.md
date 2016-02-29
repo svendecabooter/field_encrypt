@@ -6,10 +6,9 @@ for viewing.
 
 ## Configuring Field Encrypt
 
-The field encrypt module provides support for core textual fields to be 
-encrypted and decrypted. You will need to install the Key 
-(https://www.drupal.org/project/key) and Encrypt 
-(https://www.drupal.org/project/encrypt) modules for this to work.
+The field encrypt module provides support for Drupal fields to be encrypted and 
+decrypted. You will need to install the Key (https://www.drupal.org/project/key)
+and Encrypt (https://www.drupal.org/project/encrypt) modules for this to work.
  
 Make sure you have set up a secure key and encryption profile. See README files
 of these modules for more information on how to configure them securely.
@@ -17,18 +16,22 @@ of these modules for more information on how to configure them securely.
 - For each field you wish to encrypt, go to the "Storage settings" form.
 - Check the "Encrypted" checkbox to have this field automatically encrypted and
   decrypted.
+- Select which field properties to encrypt. Reasonable defaults are provided for
+  core field types.
 - Select an encryption profile to use from the "Encryption profile" list.
 - Save the field storage settings.
 
-Notes:
-- It's possible that multiple FieldEncryptionProvider plugins are registered
-to handle the field type you are trying to encrypt. In that case, an extra 
-select element "Provider" will be shown, allowing you to select which provider
-(and accompanying encryption service) you wish to use.
+You can change the default properties that will be selected per field type, on a
+per-site basis:
 
-- If the "Encrypted" checkbox is not shown, this means your field type is not
-supported for encrypted. You should install or create a module that provides a 
-FieldEncryptionProvider for that particular field type.
+- Go to Administration > Configuration > System > Field Encrypt settings
+  (/admin/config/system/field_encrypt).
+- Choose which properties should be selected by default for encryption, when
+  setting up field encryption for the available field types.
+ 
+Note: changes to the settings form do not persist to the field config or field 
+value encryption - these are merely default settings that are set ONLY when 
+a field is set up for encryption the first time.
 
 ## Architecture Documentation
 
@@ -54,30 +57,8 @@ Additionally, after we have changed the storage settings (enabled / disabled
 
 Inside the service, we iterate over each field and then each of the fields 
 values. For example, the `text_with_summary` field type has a `value` and a 
-`summary` value. The encryption itself is then handled by other services. 
-For example, text encryption is handled by the `encryption` service as part of
-the `encrypt` module.
-
-The mapping of field types to services is done with our plugin system.
-
-### FieldEncryptionProvider Plugin System
-
-Plugins can be defined to map field types to an encryption / decryption service.
-Plugins can be created by using the provided 
-`Plugin/FieldEncryptionProvider/CoreStrings.php` plugin as a reference. 
-This plugin defines the supported fields in its annotation, and loads the 
-encryption service used to process these strings.
-By using the plugin system, we allow other modules to define encryption 
-processes for non-string values such as numbers, files, and images. 
-These plugins can also define encryption process for string values of custom 
-field types.
-
-### Encryption Services
-The field_encrypt module uses services to encrypt and decrypt field values. 
-The module relies on the `encrypt` module for string processing. Other modules 
-may define their own services and map fields to those services with
- `FieldEncryptionProvider` plugins. They should extend the 
- `FieldEncryptionProviderBase` class.
+`summary` value. The encryption itself is then handled by the encryption service
+of the Encrypt module.
 
 ### Encrypt Field Storage Third Party Setting
 In Drupal 8, the field storage settings (field base in Drupal 7) are stored in
