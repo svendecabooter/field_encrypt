@@ -9,6 +9,11 @@ namespace Drupal\field_encrypt;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 
+/**
+ * Interface EncryptedFieldValueManagerInterface.
+ *
+ * @package Drupal\field_encrypt
+ */
 interface EncryptedFieldValueManagerInterface {
 
   /**
@@ -39,5 +44,13 @@ interface EncryptedFieldValueManagerInterface {
    *   The encrypted field value.
    */
   public function getEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $property);
+
+  /**
+   * Delete encrypted field values for a given entity.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to be deleted.
+   */
+  public function deleteEncryptedFieldValues(ContentEntityInterface $entity);
 
 }

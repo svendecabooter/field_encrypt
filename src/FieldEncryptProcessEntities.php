@@ -89,7 +89,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    */
   public function encryptEntity(ContentEntityInterface $entity) {
     $this->processEntity($entity, 'encrypt');
-    return $entity;
   }
 
   /**
@@ -97,7 +96,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    */
   public function decryptEntity(ContentEntityInterface $entity) {
     $this->processEntity($entity, 'decrypt');
-    return $entity;
   }
 
   /**
@@ -131,7 +129,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       // Save encrypted value in EncryptedFieldValue entity.
       $this->encryptedFieldValueManager->saveEncryptedFieldValue($entity, $field->getName(), $property_name, $processed_value);
       // Return value to store for unencrypted property.
-      // @TODO: why can't this be NULL?
+      // We can't set this to NULL, because then the field values are not saved,
+      // so we can replace them with their unencrypted value on load.
       return '[ENCRYPTED]';
 
     }
@@ -142,7 +141,9 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         $decrypted_value = $this->encryptService->decrypt(base64_decode($encrypted_value), $encryption_profile);
         return $decrypted_value;
       }
-      return '';
+      else {
+        return $value;
+      }
     }
   }
 

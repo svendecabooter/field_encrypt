@@ -76,6 +76,8 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   }
 
   /**
+   * Loads an existing EncryptedFieldValue entity.
+   *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity to check.
    * @param string $field_name
@@ -99,6 +101,19 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
       return EncryptedFieldValue::load($id);
     }
     return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function deleteEncryptedFieldValues(ContentEntityInterface $entity) {
+    $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
+      'entity_type' => $entity->getEntityTypeId(),
+      'entity_id' => $entity->id(),
+    ]);
+    if ($field_values) {
+      $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);
+    }
   }
 
 }
