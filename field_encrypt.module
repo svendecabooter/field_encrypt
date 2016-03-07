@@ -6,6 +6,7 @@
 
 use Drupal\Core\Form\FormStateInterface;
 
+
 /**
  * Implements hook_form_alter().
  *
@@ -174,7 +175,9 @@ function field_encrypt_entity_encrypt(Drupal\Core\Entity\EntityInterface $entity
   if ($entity->encrypting != TRUE) {
     $entity->encrypting = TRUE;
     // Our encryption save action should never trigger a new revision.
-    $entity->setNewRevision(FALSE);
+    if ($entity->getEntityType()->hasKey('revision')) {
+      $entity->setNewRevision(FALSE);
+    }
     $entity->save();
   }
 }

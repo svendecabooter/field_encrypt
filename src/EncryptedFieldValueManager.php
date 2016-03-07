@@ -55,7 +55,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
       $encrypted_field_value = EncryptedFieldValue::create([
         'entity_type' => $entity->getEntityTypeId(),
         'entity_id' => $entity->id(),
-        'entity_revision_id' => $entity->getRevisionId(),
+        'entity_revision_id' => $this->getEntityRevisionId($entity),
         'field_name' => $field_name,
         'field_property' => $property,
         'encrypted_value' => $encrypted_value,
@@ -90,10 +90,11 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
    *   The existing EncryptedFieldValue entity.
    */
   protected function getExistingEntity(ContentEntityInterface $entity, $field_name, $property) {
+    $revision_id = $entity->getRevisionId();
     $query = $this->entityQuery->get('encrypted_field_value')
       ->condition('entity_type', $entity->getEntityTypeId())
       ->condition('entity_id', $entity->id())
-      ->condition('entity_revision_id', $entity->getRevisionId())
+      ->condition('entity_revision_id', $this->getEntityRevisionId($entity))
       ->condition('field_name', $field_name)
       ->condition('field_property', $property);
     $values = $query->execute();
@@ -116,6 +117,25 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
     if ($field_values) {
       $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);
     }
+  }
+
+  /**
+   * Get the revision ID to store for a given entity.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to check.
+   *
+   * @return int
+   *   The revision ID.
+   */
+  protected function getEntityRevisionId($entity) {
+    if ($entity->getEntityType()->hasKey('revision')) {
+      $revision_id = $entity->getRevisionId();
+    }
+    else {
+      $revision_id = $entity->id();
+    }
+    return $revision_id;
   }
 
 }
