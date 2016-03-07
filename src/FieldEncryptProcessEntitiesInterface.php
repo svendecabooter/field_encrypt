@@ -30,6 +30,16 @@ interface FieldEncryptProcessEntitiesInterface {
   public function decryptEntity(ContentEntityInterface $entity);
 
   /**
+   * Check if entity has encrypted fields.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *
+   * @return bool
+   *   TRUE if entity has encrypted fields, FALSE if not.
+   */
+  public function checkEntity(ContentEntityInterface $entity);
+
+  /**
    * Encrypt stored fields.
    *
    * This is performed when field storage settings are updated.

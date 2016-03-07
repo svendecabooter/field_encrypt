@@ -25,17 +25,11 @@ use Drupal\field\Entity\FieldStorageConfig;
  *   fieldable = FALSE,
  *   entity_keys = {
  *     "id" = "id",
- *     "uuid" = "uuid"
+ *     "uuid" = "uuid",
+ *     "langcode" = "langcode"
  *   },
  * )
  *
- *   @TODO: check if the following settings would make sense
- *   entity_keys -->
- *   "revision" = "revision_id",
- *
- *   data_table = "encrypted_field_data",
- *   revision_table = "encrypted_field_revision",
- *   revision_data_table = "encrypted_field_revision_data",
  *   translatable = TRUE,
  *   handlers = {
  *     "storage" = "Drupal\field_encrypt\EncryptedFieldValueStorage",
@@ -50,25 +44,7 @@ class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldVal
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
-
-    // Standard field, used as unique if primary index.
-    $fields['id'] = BaseFieldDefinition::create('integer')
-      ->setLabel(t('ID'))
-      ->setDescription(t('The ID of the EncryptedFieldValue entity.'))
-      ->setReadOnly(TRUE);
-
-    // Standard field, unique outside of the scope of the current project.
-    $fields['uuid'] = BaseFieldDefinition::create('uuid')
-      ->setLabel(t('UUID'))
-      ->setDescription(t('The UUID of the EncryptedFieldValue entity.'))
-      ->setReadOnly(TRUE);
-
-    // @TODO: field language supports
-//    $fields['langcode'] = BaseFieldDefinition::create('language')
-//      ->setLabel(t('Language code'))
-//      ->setDescription(t('The language code of EncryptedFieldValue entity.'));
-
-    // @TODO: revision id
+    $fields = parent::baseFieldDefinitions($entity_type);
 
     $fields['entity_type'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Entity type'))
@@ -80,6 +56,11 @@ class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldVal
       ->setLabel(t('Entity ID'))
       ->setDescription(t('The ID of the entity for which to store the encrypted value.'))
       ->setRequired(TRUE);
+
+    $fields['entity_revision_id'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Revision ID'))
+      ->setDescription(t('The revision ID of the entity.'))
+      ->setSetting('unsigned', TRUE);
 
     $fields['field_name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Field name'))
@@ -97,6 +78,7 @@ class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldVal
       ->setLabel(t('Encrypted value'))
       ->setDescription(t('The encrypted value'));
       //->setTranslatable(TRUE)
+      //->setRevisionable(TRUE);
 
     return $fields;
   }

@@ -140,14 +140,42 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
  * Encrypts the entity after being saved for the first time.
  */
 function field_encrypt_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  if (($entity instanceof Drupal\field_encrypt\Entity\EncryptedFieldValueInterface)) {
-    return;
-  }
   // Save the entity again, but now encrypted.
   // @TODO: check if there's not a cleaner way to do this.
   $saved_entity = entity_load($entity->getEntityTypeId(), $entity->id());
-  if ($saved_entity) {
-    $saved_entity->save();
+  field_encrypt_entity_encrypt($saved_entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ *
+ * Encrypts the entity after being updated.
+ */
+function field_encrypt_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
+  field_encrypt_entity_encrypt($entity);
+}
+
+/**
+ * Encrypt the saved entity.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function field_encrypt_entity_encrypt(Drupal\Core\Entity\EntityInterface $entity) {
+  if (($entity instanceof Drupal\field_encrypt\Entity\EncryptedFieldValueInterface) || !($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {
+    return;
+  }
+  // Check if this entity has fields that should be encrypted.
+  $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+  if (!$field_encrypt_process_entities->checkEntity($entity)) {
+    return;
+  }
+
+  // Set a flag to only perform the encryption once.
+  if ($entity->encrypting != TRUE) {
+    $entity->encrypting = TRUE;
+    // Our encryption save action should never trigger a new revision.
+    $entity->setNewRevision(FALSE);
+    $entity->save();
   }
 }
 
@@ -161,7 +189,8 @@ function field_encrypt_entity_presave(\Drupal\Core\Entity\EntityInterface $entit
     return;
   }
 
-  if (!$entity->isNew()) {
+  // Only encrypt when the correct flag is set.
+  if ($entity->encrypting == TRUE) {
     /* @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities */
     $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
     $field_encrypt_process_entities->encryptEntity($entity);
@@ -183,7 +212,12 @@ function field_encrypt_entity_storage_load($entities, $entity_type) {
     if (!($entity instanceof Drupal\Core\Entity\ContentEntityInterface)) {
       continue;
     }
-    $field_encrypt_process_entities->decryptEntity($entity);
+    if (!$field_encrypt_process_entities->checkEntity($entity)) {
+      continue;
+    }
+    else {
+      $field_encrypt_process_entities->decryptEntity($entity);
+    }
   }
 }
 

@@ -99,6 +99,25 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function checkEntity(ContentEntityInterface $entity) {
+    // Make sure we can get fields.
+    if (!is_callable([$entity, 'getFields'])){
+      return FALSE;
+    }
+
+    $encryption_enabled = FALSE;
+    foreach ($entity->getFields() as $field){
+      if ($this->checkField($field)) {
+        $encryption_enabled = TRUE;
+      }
+    }
+
+    return $encryption_enabled;
+  }
+
+  /**
    * Encrypt or decrypt a value.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
@@ -148,6 +167,37 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The field to check.
+   * @return bool
+   */
+  protected function checkField(FieldItemListInterface $field) {
+    if (!is_callable([$field, 'getFieldDefinition'])){
+      return FALSE;
+    }
+
+    /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
+    $definition = $field->getFieldDefinition();
+
+    if (!is_callable([$definition, 'get'])){
+      return FALSE;
+    }
+
+    /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
+    $storage = $definition->get('fieldStorage');
+    if (is_null($storage)) {
+      return FALSE;
+    }
+
+    // Check if the field is encrypted.
+    $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
+    if ($encrypted) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  /**
    * Process a field.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
@@ -162,20 +212,15 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   anyway. This is used during batch processes.
    */
   protected function processField(ContentEntityInterface $entity, FieldItemListInterface $field, $op = 'encrypt', $force = FALSE) {
-    if (!is_callable([$field, 'getFieldDefinition'])){return;}
+    // Check if field is properly set up and allows encryption.
+    if (!$this->checkField($field)) {
+      return;
+    }
 
     /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
     $definition = $field->getFieldDefinition();
-
-    if (!is_callable([$definition, 'get'])){
-      return;
-    }
-
     /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
     $storage = $definition->get('fieldStorage');
-    if (is_null($storage)) {
-      return;
-    }
 
     /**
      * If we are using the force flag, we always proceed.
@@ -237,7 +282,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       $this->processField($entity, $field, $op);
     }
   }
-
 
   /**
    * {@inheritdoc}

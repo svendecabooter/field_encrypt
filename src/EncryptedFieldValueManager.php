@@ -55,6 +55,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
       $encrypted_field_value = EncryptedFieldValue::create([
         'entity_type' => $entity->getEntityTypeId(),
         'entity_id' => $entity->id(),
+        'entity_revision_id' => $entity->getRevisionId(),
         'field_name' => $field_name,
         'field_property' => $property,
         'encrypted_value' => $encrypted_value,
@@ -92,6 +93,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
     $query = $this->entityQuery->get('encrypted_field_value')
       ->condition('entity_type', $entity->getEntityTypeId())
       ->condition('entity_id', $entity->id())
+      ->condition('entity_revision_id', $entity->getRevisionId())
       ->condition('field_name', $field_name)
       ->condition('field_property', $property);
     $values = $query->execute();
