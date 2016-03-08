@@ -14,7 +14,6 @@ use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\encrypt\EncryptionProfileInterface;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
 use Drupal\encrypt\EncryptServiceInterface;
-use Drupal\field_encrypt\Entity\EncryptedFieldValueInterface;
 
 /**
  * Service class to process entities and fields for encryption.
@@ -58,7 +57,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   /**
    * The EncryptedFieldValue entity manager.
    *
-   * @var \Drupal\field_encrypt\Entity\EncryptedFieldValueInterface
+   * @var \Drupal\field_encrypt\EncryptedFieldValueManagerInterface
    */
   protected $encryptedFieldValueManager;
 
@@ -73,7 +72,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   The encryption service.
    * @param \Drupal\encrypt\EncryptionProfileManager $encryption_profile_manager
    *   The encryption profile manager.
-   * @param \Drupal\field_encrypt\Entity\EncryptedFieldValueInterface $encrypted_field_value_manager
+   * @param \Drupal\field_encrypt\EncryptedFieldValueManagerInterface $encrypted_field_value_manager
    *   The EncryptedFieldValue entity manager.
    */
   public function __construct(QueryFactory $query_factory, EntityManager $entity_manager, EncryptServiceInterface $encrypt_service, EncryptionProfileManagerInterface $encryption_profile_manager, EncryptedFieldValueManagerInterface $encrypted_field_value_manager) {
@@ -278,8 +277,13 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       return;
     }
 
-    foreach ($entity->getFields() as $field){
-      $this->processField($entity, $field, $op);
+    // Process all language variants of the entity.
+    $languages = $entity->getTranslationLanguages();
+    foreach ($languages as $language) {
+      $translated_entity = $entity->getTranslation($language->getId());
+      foreach ($translated_entity->getFields() as $field) {
+        $this->processField($translated_entity, $field, $op);
+      }
     }
   }
 

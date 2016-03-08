@@ -20,23 +20,17 @@ use Drupal\field\Entity\FieldStorageConfig;
  *   id = "encrypted_field_value",
  *   label = @Translation("Encrypted field value"),
  *   base_table = "encrypted_field",
+ *   data_table = "encrypted_field_data",
  *   render_cache = FALSE,
  *   admin_permission = "administer encrypted_field_value entity",
  *   fieldable = FALSE,
+ *   translatable = TRUE,
  *   entity_keys = {
  *     "id" = "id",
  *     "uuid" = "uuid",
  *     "langcode" = "langcode"
  *   },
  * )
- *
- *   translatable = TRUE,
- *   handlers = {
- *     "storage" = "Drupal\field_encrypt\EncryptedFieldValueStorage",
- *     "storage_schema" = "Drupal\field_encrypt\EncryptedFieldValueStorageSchema",
- *     "translation" = "Drupal\field_encrypt\EncryptedFieldValueTranslationHandler"
- *   }
- *
  */
 class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldValueInterface {
 
@@ -76,9 +70,8 @@ class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldVal
 
     $fields['encrypted_value'] = BaseFieldDefinition::create('text_long')
       ->setLabel(t('Encrypted value'))
-      ->setDescription(t('The encrypted value'));
-      //->setTranslatable(TRUE)
-      //->setRevisionable(TRUE);
+      ->setDescription(t('The encrypted value'))
+      ->setTranslatable(TRUE);
 
     return $fields;
   }

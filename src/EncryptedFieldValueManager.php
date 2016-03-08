@@ -48,8 +48,10 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
    * {@inheritdoc}
    */
   public function saveEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $property, $encrypted_value) {
+    $langcode = $entity->language()->getId();
     if ($encrypted_field_value = $this->getExistingEntity($entity, $field_name, $property)) {
-      $encrypted_field_value->setEncryptedValue($encrypted_value);
+      $translation = $encrypted_field_value->hasTranslation($langcode) ? $encrypted_field_value->getTranslation($langcode) : $encrypted_field_value->addTranslation($langcode);
+      $translation->setEncryptedValue($encrypted_value);
     }
     else {
       $encrypted_field_value = EncryptedFieldValue::create([
@@ -59,6 +61,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
         'field_name' => $field_name,
         'field_property' => $property,
         'encrypted_value' => $encrypted_value,
+        'langcode' => $langcode,
       ]);
     }
     $encrypted_field_value->save();
@@ -71,6 +74,10 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   public function getEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $property) {
     $field_value_entity = $this->getExistingEntity($entity, $field_name, $property);
     if ($field_value_entity) {
+      $langcode = $entity->language()->getId();
+      if ($field_value_entity->hasTranslation($langcode)) {
+        $field_value_entity = $field_value_entity->getTranslation($langcode);
+      }
       return $field_value_entity->getEncryptedValue();
     }
     return FALSE;
@@ -90,7 +97,6 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
    *   The existing EncryptedFieldValue entity.
    */
   protected function getExistingEntity(ContentEntityInterface $entity, $field_name, $property) {
-    $revision_id = $entity->getRevisionId();
     $query = $this->entityQuery->get('encrypted_field_value')
       ->condition('entity_type', $entity->getEntityTypeId())
       ->condition('entity_id', $entity->id())
