@@ -134,7 +134,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
    * @return int
    *   The revision ID.
    */
-  protected function getEntityRevisionId($entity) {
+  protected function getEntityRevisionId(ContentEntityInterface $entity) {
     if ($entity->getEntityType()->hasKey('revision')) {
       $revision_id = $entity->getRevisionId();
     }

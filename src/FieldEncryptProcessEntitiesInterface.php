@@ -16,9 +16,21 @@ use Drupal\Core\Entity\ContentEntityInterface;
 interface FieldEncryptProcessEntitiesInterface {
 
   /**
+   * Check if entity has encrypted fields.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to check.
+   *
+   * @return bool
+   *   TRUE if entity has encrypted fields, FALSE if not.
+   */
+  public function entityHasEncryptedFields(ContentEntityInterface $entity);
+
+  /**
    * Encrypt fields for an entity.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to encrypt fields on.
    */
   public function encryptEntity(ContentEntityInterface $entity);
 
@@ -26,18 +38,9 @@ interface FieldEncryptProcessEntitiesInterface {
    * Decrypt fields for an entity.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to decrypt fields on.
    */
   public function decryptEntity(ContentEntityInterface $entity);
-
-  /**
-   * Check if entity has encrypted fields.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *
-   * @return bool
-   *   TRUE if entity has encrypted fields, FALSE if not.
-   */
-  public function checkEntity(ContentEntityInterface $entity);
 
   /**
    * Encrypt stored fields.
@@ -62,4 +65,5 @@ interface FieldEncryptProcessEntitiesInterface {
    *   The name of the field to decrypt.
    */
   public function decryptStoredField($entity_type, $field_name);
+
 }
