@@ -75,7 +75,6 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
       '#tree' => TRUE,
     );
 
-
     // Gather valid field types.
     foreach ($this->fieldTypePluginManager->getGroupedDefinitions($this->fieldTypePluginManager->getUiDefinitions()) as $category => $field_types) {
 

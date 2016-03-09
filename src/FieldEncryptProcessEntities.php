@@ -15,27 +15,25 @@ use Drupal\encrypt\EncryptionProfileInterface;
 use Drupal\encrypt\EncryptionProfileManagerInterface;
 use Drupal\encrypt\EncryptServiceInterface;
 
-
 /**
  * Service class to process entities and fields for encryption.
  */
 class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterface {
 
   /**
-   * A flag to disable decryption if we are in the process of updating stored
-   * fields.
+   * Flag to disable decryption when in the process of updating stored fields.
    */
   protected $updatingStoredField = 'none';
 
   /**
-   * Query Factory
+   * The query factory.
    *
    * @var \Drupal\Core\Entity\Query\QueryFactory
    */
   protected $queryFactory;
 
   /**
-   * Entity Manager
+   * The entity manager.
    *
    * @var \Drupal\Core\Entity\EntityManager
    */
@@ -56,22 +54,51 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   protected $encryptionProfileManager;
 
   /**
+   * The EncryptedFieldValue entity manager.
+   *
+   * @var \Drupal\field_encrypt\EncryptedFieldValueManagerInterface
+   */
+  protected $encryptedFieldValueManager;
+
+  /**
    * {@inheritdoc}
    *
    * @param \Drupal\Core\Entity\Query\QueryFactory $query_factory
    *   A query factory service.
    * @param \Drupal\Core\Entity\EntityManager $entity_manager
    *   An entity manager service.
-   * @param \Drupal\encrypt\EncryptServiceInterface
+   * @param \Drupal\encrypt\EncryptServiceInterface $encrypt_service
    *   The encryption service.
-   * @param \Drupal\encrypt\EncryptionProfileManager $encryption_profile_manager
+   * @param \Drupal\encrypt\EncryptionProfileManagerInterface $encryption_profile_manager
    *   The encryption profile manager.
+   * @param \Drupal\field_encrypt\EncryptedFieldValueManagerInterface $encrypted_field_value_manager
+   *   The EncryptedFieldValue entity manager.
    */
-  public function __construct(QueryFactory $query_factory, EntityManager $entity_manager, EncryptServiceInterface $encrypt_service, EncryptionProfileManagerInterface $encryption_profile_manager) {
+  public function __construct(QueryFactory $query_factory, EntityManager $entity_manager, EncryptServiceInterface $encrypt_service, EncryptionProfileManagerInterface $encryption_profile_manager, EncryptedFieldValueManagerInterface $encrypted_field_value_manager) {
     $this->queryFactory = $query_factory;
     $this->entityManager = $entity_manager;
     $this->encryptService = $encrypt_service;
     $this->encryptionProfileManager = $encryption_profile_manager;
+    $this->encryptedFieldValueManager = $encrypted_field_value_manager;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entityHasEncryptedFields(ContentEntityInterface $entity) {
+    // Make sure we can get fields.
+    if (!is_callable([$entity, 'getFields'])) {
+      return FALSE;
+    }
+
+    $encryption_enabled = FALSE;
+    foreach ($entity->getFields() as $field) {
+      if ($this->checkField($field)) {
+        $encryption_enabled = TRUE;
+      }
+    }
+
+    return $encryption_enabled;
   }
 
   /**
@@ -89,72 +116,61 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
-   * Encrypt or decrypt a value.
+   * Process an entity to either encrypt or decrypt its fields.
    *
-   * @param string $value
-   *   The value to encrypt / decrypt
-   * @param \Drupal\encrypt\EncryptionProfileInterface $encryption_profile
-   *   The encryption profile to use.
+   * Both processes are very similar, so we bundle the field processing part.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to process.
    * @param string $op
-   *   The operation ("encrypt" or "decrypt")
-   *
-   * @return string
-   *   The processed value.
+   *   The operation to perform (encrypt / decrypt).
    */
-  protected function processValue($value = '', EncryptionProfileInterface $encryption_profile, $op = 'encrypt') {
-    // Do not modify empty strings.
-    if ($value === ''){
-      return '';
+  protected function processEntity(ContentEntityInterface $entity, $op = 'encrypt') {
+    // Make sure we can get fields.
+    if (!is_callable([$entity, 'getFields'])) {
+      return;
     }
 
-    if ($op === 'encrypt') {
-      return base64_encode($this->encryptService->encrypt($value, $encryption_profile));
-    }
-    elseif ($op === 'decrypt') {
-      return $this->encryptService->decrypt(base64_decode($value), $encryption_profile);
-    }
-    else {
-      return '';
+    // Process all language variants of the entity.
+    $languages = $entity->getTranslationLanguages();
+    foreach ($languages as $language) {
+      $translated_entity = $entity->getTranslation($language->getId());
+      foreach ($translated_entity->getFields() as $field) {
+        $this->processField($translated_entity, $field, $op);
+      }
     }
   }
 
   /**
    * Process a field.
    *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to process.
    * @param \Drupal\Core\Field\FieldItemListInterface $field
    *   The field to process.
    * @param string $op
    *   The operation to perform (encrypt / decrypt).
-   * @param boolean $force
+   * @param bool $force
    *   Whether to force the operation.
    *   If set, we don't check if encryption is enabled, we process the field
    *   anyway. This is used during batch processes.
    */
-  protected function processField(FieldItemListInterface $field, $op = 'encrypt', $force = FALSE) {
-    if (!is_callable([$field, 'getFieldDefinition'])){return;}
+  protected function processField(ContentEntityInterface $entity, FieldItemListInterface $field, $op = 'encrypt', $force = FALSE) {
+    // Check if field is properly set up and allows encryption.
+    if (!$this->checkField($field)) {
+      return;
+    }
 
     /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
     $definition = $field->getFieldDefinition();
-
-    if (!is_callable([$definition, 'get'])){
-      return;
-    }
-
     /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
     $storage = $definition->get('fieldStorage');
-    if (is_null($storage)) {
-      return;
-    }
 
-    /**
-     * If we are using the force flag, we always proceed.
-     * The force flag is used when we are updating stored fields.
-     */
+    // If we are using the force flag, we always proceed.
+    // The force flag is used when we are updating stored fields.
     if (!$force) {
-      /**
-       * Check if we are updating the field, in that case, skip it now (during
-       * the initial entity load.
-       */
+      // Check if we are updating the field, in that case, skip it now (during
+      // the initial entity load.
       if ($this->updatingStoredField === $definition->get('field_name')) {
         return;
       }
@@ -177,7 +193,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       // Process each of the field properties that exist.
       foreach ($properties as $property_name) {
         if (isset($value[$property_name])) {
-          $value[$property_name] = $this->processValue($value[$property_name], $encryption_profile, $op);
+          $value[$property_name] = $this->processValue($entity, $field, $property_name, $encryption_profile, $value[$property_name], $op);
         }
       }
     }
@@ -187,48 +203,113 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
-   * Process an entity to either encrypt or decrypt its fields.
+   * Check if a given field has encryption enabled.
    *
-   * Both processes are very similar, so we bundle the field processing part.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The field to check.
+   *
+   * @return bool
+   *   Boolean indicating whether to encrypt the field.
+   */
+  protected function checkField(FieldItemListInterface $field) {
+    if (!is_callable([$field, 'getFieldDefinition'])) {
+      return FALSE;
+    }
+
+    /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
+    $definition = $field->getFieldDefinition();
+
+    if (!is_callable([$definition, 'get'])) {
+      return FALSE;
+    }
+
+    /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
+    $storage = $definition->get('fieldStorage');
+    if (is_null($storage)) {
+      return FALSE;
+    }
+
+    // Check if the field is encrypted.
+    $encrypted = $storage->getThirdPartySetting('field_encrypt', 'encrypt', FALSE);
+    if ($encrypted) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  /**
+   * Encrypt or decrypt a value.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity to process.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The field to process.
+   * @param string $property_name
+   *   The name of the property.
+   * @param \Drupal\encrypt\EncryptionProfileInterface $encryption_profile
+   *   The encryption profile to use.
+   * @param string $value
+   *   The value to encrypt / decrypt.
    * @param string $op
-   *   The operation to perform (encrypt / decrypt).
+   *   The operation ("encrypt" or "decrypt").
+   *
+   * @return string
+   *   The processed value.
    */
-  protected function processEntity(ContentEntityInterface $entity, $op = 'encrypt') {
-    // Make sure we can get fields.
-    if (!is_callable([$entity, 'getFields'])){
-      return;
+  protected function processValue(ContentEntityInterface $entity, FieldItemListInterface $field, $property_name, EncryptionProfileInterface $encryption_profile, $value = '', $op = 'encrypt') {
+    // Do not modify empty strings.
+    if ($value === '') {
+      return '';
     }
 
-    foreach ($entity->getFields() as $field){
-      $this->processField($field, $op);
+    if ($op === 'encrypt') {
+      // Encrypt property value.
+      $processed_value = base64_encode($this->encryptService->encrypt($value, $encryption_profile));
+      // Save encrypted value in EncryptedFieldValue entity.
+      $this->encryptedFieldValueManager->saveEncryptedFieldValue($entity, $field->getName(), $property_name, $processed_value);
+      // Return value to store for unencrypted property.
+      // We can't set this to NULL, because then the field values are not saved,
+      // so we can't replace them with their unencrypted value on load.
+      return '[ENCRYPTED]';
+
+    }
+    elseif ($op === 'decrypt') {
+      // Get encrypted value from EncryptedFieldValue entity.
+      if ($encrypted_value = $this->encryptedFieldValueManager->getEncryptedFieldValue($entity, $field->getName(), $property_name)) {
+        // Decrypt value.
+        $decrypted_value = $this->encryptService->decrypt(base64_decode($encrypted_value), $encryption_profile);
+        return $decrypted_value;
+      }
+      else {
+        return $value;
+      }
     }
   }
-
 
   /**
    * {@inheritdoc}
    */
   public function encryptStoredField($entity_type, $field_name) {
-    $this->updateStoredField($entity_type, $field_name, 'encrypt');
+    // @TODO: refactor
+    //$this->updateStoredField($entity_type, $field_name, 'encrypt');
   }
 
   /**
    * {@inheritdoc}
    */
   public function decryptStoredField($entity_type, $field_name) {
-    $this->updateStoredField($entity_type, $field_name, 'decrypt');
+    // @TODO: refactor
+    //$this->updateStoredField($entity_type, $field_name, 'decrypt');
   }
 
   /**
-   * Update a field. This is used to process fields when the storage
-   * configuration changes.
+   * Update a field.
    *
-   * @param $entity_type
+   * This is used to process fields when the storage configuration changes.
+   *
+   * @param string $entity_type
    *   The entity type.
-   * @param $field_name
+   * @param string $field_name
    *   The name of the field to update.
    * @param string $op
    *   The operation to perform (encrypt / decrypt).
@@ -251,6 +332,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     $entity_ids = $query->execute();
 
     // Load entities.
+    // @TODO: use EntityTypeManager instead of EntityManager
     /* @var $entity_storage \Drupal\Core\Entity\ContentEntityStorageBase */
     $entity_storage = $this->entityManager->getStorage($entity_type);
 
@@ -260,6 +342,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
 
       /** @var $field \Drupal\Core\Field\FieldItemList */
       $field = $entity->get($field_name);
+      // @TODO: add Entity as first parameter
       $this->processField($field, $op, TRUE);
 
       // Save the entity.
