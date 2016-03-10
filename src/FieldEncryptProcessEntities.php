@@ -303,7 +303,14 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     $this->updatingStoredField = $field_name;
 
     $entity_storage = $this->entityManager->getStorage($field_entity_type);
-    $entity = $entity_storage->load($entity_id);
+    // Check if entity allows revisions.
+    if ($this->entityManager->getDefinition($field_entity_type)->hasKey('revision')) {
+      $entity = $entity_storage->loadRevision($entity_id);
+    }
+    else {
+      $entity = $entity_storage->load($entity_id);
+    }
+
     $field = $entity->get($field_name);
     // Decrypt with original settings.
     $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);

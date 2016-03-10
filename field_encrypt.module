@@ -141,23 +141,27 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
  */
 function field_encrypt_update_encryption_form_submit(&$form, FormStateInterface $form_state) {
   $storage = $form_state->getStorage();
+  $entity_type_manager = \Drupal::service('entity_type.manager');
   if (isset($storage['field_encrypt_update']) && $storage['field_encrypt_update'] == TRUE) {
-    $field_entity_type = $storage['field_encrypt_entity_type'];
+    $entity_type_id = $storage['field_encrypt_entity_type'];
+    $entity_type = $entity_type_manager->getDefinition($entity_type_id);
     $field_name = $storage['field_encrypt_field_name'];
     $original_encryption_settings = $storage['original_encryption_settings'];
 
     // Get entity IDs to update.
     $entity_query = \Drupal::service('entity.query');
-    $query = $entity_query->get($field_entity_type);
+    $query = $entity_query->get($entity_type_id);
     // Check if the field is present.
     $query->exists($field_name);
-    //$query->allRevisions();
+    if ($entity_type->hasKey('revision')) {
+      $query->allRevisions();
+    }
     $entity_ids = $query->execute();
 
     $batch = array(
       'title' => t('Updating field encryption'),
       'operations' => array(
-        array('field_encrypt_update_field_encryption', array($entity_ids, $field_name, $field_entity_type, $original_encryption_settings)),
+        array('field_encrypt_update_field_encryption', array(array_keys($entity_ids), $field_name, $entity_type_id, $original_encryption_settings)),
       ),
       'finished' => 'field_encrypt_update_field_encryption_finished',
     );
@@ -182,7 +186,6 @@ function field_encrypt_update_field_encryption($entity_ids, $field_name, $field_
   }
 
   // Process entities by groups of 5.
-  //$ids_to_process = array_slice($context['sandbox']['entity_ids'], 0, 5, TRUE);
   $count = min(5, count($context['sandbox']['entity_ids']));
   for ($i = 1; $i <= $count; $i++) {
     $entity_id = array_shift($context['sandbox']['entity_ids']);
