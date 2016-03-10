@@ -80,7 +80,8 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         ],
       );
 
-      // We add a function to process the form when it is saved.
+      // We add functions to process the form when it is saved.
+      $form['actions']['submit']['#submit'][] = 'field_encrypt_update_encryption_form_submit';
       $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
     }
   }
@@ -100,11 +101,12 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
  */
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $field_storage_config, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   $field_encryption_settings = $form_state->getValue('field_encrypt');
+  $field_encryption_settings['encrypt'] = (bool) $field_encryption_settings['encrypt'];
   $form_encryption = $field_encryption_settings['encrypt'];
   $original_encryption = $field_storage_config->getThirdPartySettings('field_encrypt');
 
   // If the form has the value, we set it.
-  if ($form_encryption === 1) {
+  if ($form_encryption) {
     foreach ($field_encryption_settings as $settings_key => $settings_value) {
       $field_storage_config->setThirdPartySetting('field_encrypt', $settings_key, $settings_value);
     }
@@ -117,21 +119,107 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
   }
 
   if ($original_encryption !== $field_storage_config->getThirdPartySettings('field_encrypt')) {
-    // We need to process the field to either encrypt or decrypt the stored
-    // fields if the setting was changed.
-    $field_name = $field_storage_config->get('field_name');
-    $field_entity_type = $field_storage_config->get('entity_type');
-
-    /* @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities */
-    // @TODO: refactor logic for re-encrypting existing fields - currently broken, so commented out.
-    //    $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
-    //    if ($form_encryption === 1) {
-    //      $field_encrypt_process_entities->encryptStoredField($field_entity_type, $field_name);
-    //    }
-    //    elseif ($form_encryption === 0) {
-    //      $field_encrypt_process_entities->decryptStoredField($field_entity_type, $field_name);
-    //    }
+    // Only re-encrypt field data if this field contains actual data.
+    if ($field_storage_config->hasData()) {
+      // We need to process the field to either encrypt or decrypt the stored
+      // fields if the setting was changed.
+      $storage = $form_state->getStorage();
+      $storage['field_encrypt_update'] = TRUE;
+      $storage['field_encrypt_field_name'] = $field_storage_config->get('field_name');
+      $storage['field_encrypt_entity_type'] = $field_storage_config->get('entity_type');
+      $storage['original_encryption_settings'] = $original_encryption;
+      $form_state->setStorage($storage);
+    }
   }
+}
+
+/**
+ * Submit handler to update encryption after saving field storage settings.
+ *
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ */
+function field_encrypt_update_encryption_form_submit(&$form, FormStateInterface $form_state) {
+  $storage = $form_state->getStorage();
+  if (isset($storage['field_encrypt_update']) && $storage['field_encrypt_update'] == TRUE) {
+    $field_entity_type = $storage['field_encrypt_entity_type'];
+    $field_name = $storage['field_encrypt_field_name'];
+    $original_encryption_settings = $storage['original_encryption_settings'];
+
+    // Get entity IDs to update.
+    $entity_query = \Drupal::service('entity.query');
+    $query = $entity_query->get($field_entity_type);
+    // Check if the field is present.
+    $query->exists($field_name);
+    //$query->allRevisions();
+    $entity_ids = $query->execute();
+
+    $batch = array(
+      'title' => t('Updating field encryption'),
+      'operations' => array(
+        array('field_encrypt_update_field_encryption', array($entity_ids, $field_name, $field_entity_type, $original_encryption_settings)),
+      ),
+      'finished' => 'field_encrypt_update_field_encryption_finished',
+    );
+    batch_set($batch);
+  }
+}
+
+/**
+ * Callback for batch updating of encryption fields.
+ *
+ * @param $entity_type
+ * @param $field_name
+ * @param $context
+ */
+function field_encrypt_update_field_encryption($entity_ids, $field_name, $field_entity_type, $original_encryption_settings, &$context) {
+//  $entity_type_manager = \Drupal::service('entity_type.manager');
+  $process_entities = \Drupal::service('field_encrypt.process_entities');
+  if (empty($context['sandbox'])) {
+    $context['sandbox']['entity_ids'] = $entity_ids;
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['max'] = count($entity_ids);
+  }
+
+  // Process entities by groups of 5.
+  //$ids_to_process = array_slice($context['sandbox']['entity_ids'], 0, 5, TRUE);
+  $count = min(5, count($context['sandbox']['entity_ids']));
+  for ($i = 1; $i <= $count; $i++) {
+    $entity_id = array_shift($context['sandbox']['entity_ids']);
+    /* @var $entity_storage Drupal\Core\Entity\EntityStorageInterface */
+    $process_entities->updateStoredField($field_name, $field_entity_type, $original_encryption_settings, $entity_id);
+    $context['results'][] = $entity_id;
+    // Update our progress information.
+    $context['sandbox']['progress']++;
+  }
+
+  // Inform the batch engine that we are not finished,
+  // and provide an estimation of the completion level we reached.
+  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+}
+
+/**
+ * Callback for finishing batch encryption updates of fields.
+ *
+ * @param bool $success
+ *   A boolean indicating whether the batch has completed successfully.
+ * @param array $results
+ *   The value set in $context['results'] by callback_batch_operation().
+ * @param array $operations
+ *   If $success is FALSE, contains the operations that remained unprocessed.
+ */
+function field_encrypt_update_field_encryption_finished($success, $results, $operations) {
+  // The 'success' parameter means no fatal PHP errors were detected. All
+  // other error management should be handled using 'results'.
+  if ($success) {
+    $message = \Drupal::translation()->formatPlural(count($results), 'One entity updated.', '@count entities updated.');
+  }
+  else {
+    $message = t('Finished with an error.');
+  }
+  drupal_set_message($message);
 }
 
 /**

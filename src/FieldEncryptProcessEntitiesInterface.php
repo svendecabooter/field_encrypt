@@ -43,27 +43,17 @@ interface FieldEncryptProcessEntitiesInterface {
   public function decryptEntity(ContentEntityInterface $entity);
 
   /**
-   * Encrypt stored fields.
+   * Update the encryption settings on a stored field.
    *
-   * This is performed when field storage settings are updated.
-   *
-   * @param string $entity_type
-   *   The entity type.
    * @param string $field_name
-   *   The name of the field to encrypt.
+   *   The field name to update.
+   * @param string $field_entity_type
+   *   The entity type to update.
+   * @param array $original_encryption_settings
+   *   Array with original encryption settings to decrypt current values.
+   * @param $entity_id
+   *   The entity (revision) ID to update.
    */
-  public function encryptStoredField($entity_type, $field_name);
-
-  /**
-   * Decrypt stored fields.
-   *
-   * This is performed when field storage settings are updated.
-   *
-   * @param string $entity_type
-   *   The entity type.
-   * @param string $field_name
-   *   The name of the field to decrypt.
-   */
-  public function decryptStoredField($entity_type, $field_name);
+  public function updateStoredField($field_name, $field_entity_type, $original_encryption_settings, $entity_id);
 
 }
