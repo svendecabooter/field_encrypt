@@ -157,7 +157,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    */
   protected function processField(ContentEntityInterface $entity, FieldItemListInterface $field, $op = 'encrypt', $update = FALSE, $original_encryption_settings = []) {
     // Check if field is properly set up and allows encryption.
-    if (!$this->checkField($field)) {
+    if (!$update && !$this->checkField($field)) {
       return;
     }
 
@@ -332,20 +332,22 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   Array with original encryption settings to decrypt current values.
    */
   protected function processStoredField($entity, $field_name, $original_encryption_settings) {
-    // Field is currently unencrypted - make sure it gets encrypted.
-    if (empty($original_encryption_settings)) {
-      $entity->doFieldEncryption = TRUE;
-      $entity->save();
-    }
-    else {
-      // Update current encrypted value.
-      $field = $entity->get($field_name);
-      // Decrypt with original settings.
-      $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
+    $field = $entity->get($field_name);
 
-      // Encrypt with new settings.
-      $this->updatingStoredField = FALSE;
-      $this->processField($entity, $field, 'encrypt');
+    // Decrypt with original settings, if available.
+    if (!empty($original_encryption_settings)) {
+      $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
     }
+
+    // Deactivate encryption if field is no longer encrypted.
+    if (!$this->checkField($field)) {
+      $this->encryptedFieldValueManager->deleteEncryptedFieldValuesForField($entity->getEntityTypeId(), $field_name);
+    }
+
+    // Remove flag that avoids processing field on load, since we want to save.
+    $this->updatingStoredField = FALSE;
+    // Set flag to trigger field encryption in field_encrypt_entity_presave().
+    $entity->doFieldEncryption = TRUE;
+    $entity->save();
   }
 }

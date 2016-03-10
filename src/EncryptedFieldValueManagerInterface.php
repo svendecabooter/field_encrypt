@@ -53,4 +53,13 @@ interface EncryptedFieldValueManagerInterface {
    */
   public function deleteEncryptedFieldValues(ContentEntityInterface $entity);
 
+  /**
+   * Delete encrypted field values for a given field.
+   *
+   * @param string $entity_type
+   *   The entity type ID.
+   * @param string $field_name
+   *   The field name to delete encrypted values for.
+   */
+  public function deleteEncryptedFieldValuesForField($entity_type, $field_name);
 }
