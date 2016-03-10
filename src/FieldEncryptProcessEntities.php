@@ -315,10 +315,12 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     $languages = $entity->getTranslationLanguages();
     foreach ($languages as $language) {
       $this->updatingStoredField = $field_name;
-      $translated_entity = $entity->getTranslation($language->getId());
-      $this->processStoredField($translated_entity, $field_name, $original_encryption_settings);
+      $entity = $entity->getTranslation($language->getId());
+      $this->processStoredField($entity, $field_name, $original_encryption_settings);
     }
-
+    // Set flag to trigger field encryption in field_encrypt_entity_presave().
+    $entity->doFieldEncryption = TRUE;
+    $entity->save();
   }
 
   /**
@@ -346,8 +348,5 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
 
     // Remove flag that avoids processing field on load, since we want to save.
     $this->updatingStoredField = FALSE;
-    // Set flag to trigger field encryption in field_encrypt_entity_presave().
-    $entity->doFieldEncryption = TRUE;
-    $entity->save();
   }
 }
