@@ -311,13 +311,41 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       $entity = $entity_storage->load($entity_id);
     }
 
-    $field = $entity->get($field_name);
-    // Decrypt with original settings.
-    $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
+    // Process all language variants of the entity.
+    $languages = $entity->getTranslationLanguages();
+    foreach ($languages as $language) {
+      $this->updatingStoredField = $field_name;
+      $translated_entity = $entity->getTranslation($language->getId());
+      $this->processStoredField($translated_entity, $field_name, $original_encryption_settings);
+    }
 
-    // Encrypt with new settings.
-    $this->updatingStoredField = FALSE;
-    $this->processField($entity, $field, 'encrypt');
   }
 
+  /**
+   * Perform processing on a stored field that needs updating.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to process the field on.
+   * @param $field_name
+   *   The field name to process.
+   * @param $original_encryption_settings
+   *   Array with original encryption settings to decrypt current values.
+   */
+  protected function processStoredField($entity, $field_name, $original_encryption_settings) {
+    // Field is currently unencrypted - make sure it gets encrypted.
+    if (empty($original_encryption_settings)) {
+      $entity->doFieldEncryption = TRUE;
+      $entity->save();
+    }
+    else {
+      // Update current encrypted value.
+      $field = $entity->get($field_name);
+      // Decrypt with original settings.
+      $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
+
+      // Encrypt with new settings.
+      $this->updatingStoredField = FALSE;
+      $this->processField($entity, $field, 'encrypt');
+    }
+  }
 }

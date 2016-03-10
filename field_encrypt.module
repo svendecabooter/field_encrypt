@@ -217,7 +217,7 @@ function field_encrypt_update_field_encryption_finished($success, $results, $ope
   // The 'success' parameter means no fatal PHP errors were detected. All
   // other error management should be handled using 'results'.
   if ($success) {
-    $message = \Drupal::translation()->formatPlural(count($results), 'One entity updated.', '@count entities updated.');
+    $message = \Drupal::translation()->formatPlural(count($results), 'One field updated.', '@count fields updated.');
   }
   else {
     $message = t('Finished with an error.');
@@ -232,9 +232,10 @@ function field_encrypt_update_field_encryption_finished($success, $results, $ope
  */
 function field_encrypt_entity_insert(EntityInterface $entity) {
   // Save the entity again, but now encrypted.
-  // @TODO: check if there's not a cleaner way to do this.
-  $saved_entity = entity_load($entity->getEntityTypeId(), $entity->id());
-  field_encrypt_entity_encrypt($saved_entity);
+  if (field_encrypt_allow_encryption($entity)) {
+    $saved_entity = entity_load($entity->getEntityTypeId(), $entity->id());
+    field_encrypt_entity_encrypt($saved_entity);
+  }
 }
 
 /**
