@@ -171,7 +171,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     if (!$update) {
       // Check if we are updating the field, in that case, skip it now (during
       // the initial entity load.
-      if ($this->updatingStoredField === $definition->get('field_name')) {
+      if ($op == "decrypt" && $this->updatingStoredField === $definition->get('field_name')) {
         return;
       }
 
@@ -347,6 +347,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     }
 
     // Remove flag that avoids processing field on load, since we want to save.
-    $this->updatingStoredField = FALSE;
+    //$this->updatingStoredField = FALSE;
   }
 }
