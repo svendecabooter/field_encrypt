@@ -20,7 +20,6 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
 
     // Check permissions.
     $user = \Drupal::currentUser();
-
     if ($user->hasPermission('administer field encryption')) {
       /* @var $field \Drupal\field\Entity\FieldStorageConfig */
       $field = $form_state->getFormObject()->getEntity();
@@ -33,6 +32,11 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         '#title' => t('Field encryption'),
         '#open' => TRUE,
       );
+
+      // Display a warning about changing field data.
+      if ($form_id == "field_storage_config_edit_form" && $field->hasData()) {
+        $form['field_encrypt']['#prefix'] = '<div class="messages messages--warning">' .t('Warning: changing field encryption settings may cause data corruption!<br />When changing these settings, existing fields will be (re)encrypted in batch according to the new settings. <br />Make sure you have a proper backup, and do not perform this action in an environment where the data will be changing during the batch operation, to avoid data loss.') . '</div>';
+      }
 
       $form['field_encrypt']['field_encrypt'] = array(
         '#type' => 'container',
