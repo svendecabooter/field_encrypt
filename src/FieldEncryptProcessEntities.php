@@ -314,39 +314,23 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     // Process all language variants of the entity.
     $languages = $entity->getTranslationLanguages();
     foreach ($languages as $language) {
-      $this->updatingStoredField = $field_name;
       $entity = $entity->getTranslation($language->getId());
-      $this->processStoredField($entity, $field_name, $original_encryption_settings);
+      $field = $entity->get($field_name);
+      // Decrypt with original settings, if available.
+      if (!empty($original_encryption_settings)) {
+        $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
+      }
     }
+
     // Set flag to trigger field encryption in field_encrypt_entity_presave().
+    // This will re-encrypt the field with the new settings.
     $entity->doFieldEncryption = TRUE;
     $entity->save();
-  }
-
-  /**
-   * Perform processing on a stored field that needs updating.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The entity to process the field on.
-   * @param $field_name
-   *   The field name to process.
-   * @param $original_encryption_settings
-   *   Array with original encryption settings to decrypt current values.
-   */
-  protected function processStoredField($entity, $field_name, $original_encryption_settings) {
-    $field = $entity->get($field_name);
-
-    // Decrypt with original settings, if available.
-    if (!empty($original_encryption_settings)) {
-      $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
-    }
 
     // Deactivate encryption if field is no longer encrypted.
     if (!$this->checkField($field)) {
-      $this->encryptedFieldValueManager->deleteEncryptedFieldValuesForField($entity->getEntityTypeId(), $field_name);
+      $this->encryptedFieldValueManager->deleteEncryptedFieldValuesForField($entity, $field_name);
     }
-
-    // Remove flag that avoids processing field on load, since we want to save.
-    //$this->updatingStoredField = FALSE;
   }
+
 }

@@ -56,10 +56,10 @@ interface EncryptedFieldValueManagerInterface {
   /**
    * Delete encrypted field values for a given field.
    *
-   * @param string $entity_type
-   *   The entity type ID.
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity containing the field to be deleted.
    * @param string $field_name
    *   The field name to delete encrypted values for.
    */
-  public function deleteEncryptedFieldValuesForField($entity_type, $field_name);
+  public function deleteEncryptedFieldValuesForField($entity, $field_name);
 }

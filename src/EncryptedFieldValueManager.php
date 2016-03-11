@@ -126,6 +126,20 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function deleteEncryptedFieldValuesForField($entity, $field_name) {
+    $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
+      'entity_type' => $entity->getEntityTypeId(),
+      'field_name' => $field_name,
+      'entity_revision_id' => $this->getEntityRevisionId($entity),
+    ]);
+    if ($field_values) {
+      $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);
+    }
+  }
+
+  /**
    * Get the revision ID to store for a given entity.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
@@ -142,19 +156,6 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
       $revision_id = $entity->id();
     }
     return $revision_id;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function deleteEncryptedFieldValuesForField($entity_type, $field_name) {
-    $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
-      'entity_type' => $entity_type,
-      'field_name' => $field_name,
-    ]);
-    if ($field_values) {
-      $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);
-    }
   }
 
 }
