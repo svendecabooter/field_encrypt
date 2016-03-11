@@ -196,11 +196,11 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     $encryption_profile = $this->encryptionProfileManager->getEncryptionProfile($encryption_profile_id);
 
     // Process the field with the given encryption provider.
-    foreach ($field_value as &$value) {
+    foreach ($field_value as $delta => &$value) {
       // Process each of the field properties that exist.
       foreach ($properties as $property_name) {
         if (isset($value[$property_name])) {
-          $value[$property_name] = $this->processValue($entity, $field, $property_name, $encryption_profile, $value[$property_name], $op);
+          $value[$property_name] = $this->processValue($entity, $field, $delta, $property_name, $encryption_profile, $value[$property_name], $op);
         }
       }
     }
@@ -251,6 +251,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   The entity to process.
    * @param \Drupal\Core\Field\FieldItemListInterface $field
    *   The field to process.
+   * @param int $delta
+   *   The field delta.
    * @param string $property_name
    *   The name of the property.
    * @param \Drupal\encrypt\EncryptionProfileInterface $encryption_profile
@@ -263,7 +265,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    * @return string
    *   The processed value.
    */
-  protected function processValue(ContentEntityInterface $entity, FieldItemListInterface $field, $property_name, EncryptionProfileInterface $encryption_profile, $value = '', $op = 'encrypt') {
+  protected function processValue(ContentEntityInterface $entity, FieldItemListInterface $field, $delta, $property_name, EncryptionProfileInterface $encryption_profile, $value = '', $op = 'encrypt') {
     // Do not modify empty strings.
     if ($value === '') {
       return '';
@@ -273,7 +275,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       // Encrypt property value.
       $processed_value = base64_encode($this->encryptService->encrypt($value, $encryption_profile));
       // Save encrypted value in EncryptedFieldValue entity.
-      $this->encryptedFieldValueManager->saveEncryptedFieldValue($entity, $field->getName(), $property_name, $processed_value);
+      $this->encryptedFieldValueManager->saveEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
       // Return value to store for unencrypted property.
       // We can't set this to NULL, because then the field values are not saved,
       // so we can't replace them with their unencrypted value on load.
@@ -282,7 +284,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     }
     elseif ($op === 'decrypt') {
       // Get encrypted value from EncryptedFieldValue entity.
-      if ($encrypted_value = $this->encryptedFieldValueManager->getEncryptedFieldValue($entity, $field->getName(), $property_name)) {
+      if ($encrypted_value = $this->encryptedFieldValueManager->getEncryptedFieldValue($entity, $field->getName(), $delta, $property_name)) {
         // Decrypt value.
         $decrypted_value = $this->encryptService->decrypt(base64_decode($encrypted_value), $encryption_profile);
         return $decrypted_value;
