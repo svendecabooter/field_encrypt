@@ -23,7 +23,7 @@ interface EncryptedFieldValueManagerInterface {
    *   The entity to process.
    * @param string $field_name
    *   The field name to save.
-   * @param int delta
+   * @param int $delta
    *   The field delta to save.
    * @param string $property
    *   The field property to save.
@@ -39,7 +39,7 @@ interface EncryptedFieldValueManagerInterface {
    *   The entity to process.
    * @param string $field_name
    *   The field name to retrieve.
-   * @param int delta
+   * @param int $delta
    *   The field delta to retrieve.
    * @param string $property
    *   The field property to retrieve.
@@ -65,5 +65,6 @@ interface EncryptedFieldValueManagerInterface {
    * @param string $field_name
    *   The field name to delete encrypted values for.
    */
-  public function deleteEncryptedFieldValuesForField($entity, $field_name);
+  public function deleteEncryptedFieldValuesForField(ContentEntityInterface $entity, $field_name);
+
 }

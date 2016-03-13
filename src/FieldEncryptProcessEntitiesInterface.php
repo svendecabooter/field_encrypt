@@ -51,7 +51,7 @@ interface FieldEncryptProcessEntitiesInterface {
    *   The entity type to update.
    * @param array $original_encryption_settings
    *   Array with original encryption settings to decrypt current values.
-   * @param $entity_id
+   * @param int $entity_id
    *   The entity (revision) ID to update.
    */
   public function updateStoredField($field_name, $field_entity_type, $original_encryption_settings, $entity_id);

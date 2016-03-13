@@ -139,16 +139,12 @@ class FieldEncryptTest extends WebTestBase {
       'entity_type' => 'node',
       'type' => 'text_with_summary',
       'cardinality' => 1,
-      'field_encrypt' => [
-        'encrypt' => 1,
-        ''
-      ]
     ));
     $single_field_storage->save();
     $single_field = FieldConfig::create([
       'field_storage' => $single_field_storage,
       'bundle' => 'page',
-      'label' => 'Single field'
+      'label' => 'Single field',
     ]);
     $single_field->save();
     entity_get_form_display('node', 'page', 'default')
@@ -170,7 +166,7 @@ class FieldEncryptTest extends WebTestBase {
     $multi_field = FieldConfig::create([
       'field_storage' => $multi_field_storage,
       'bundle' => 'page',
-      'label' => 'Multi field'
+      'label' => 'Multi field',
     ]);
     $multi_field->save();
     entity_get_form_display('node', 'page', 'default')
@@ -198,7 +194,7 @@ class FieldEncryptTest extends WebTestBase {
           'value' => "Lorem ipsum dolor sit amet.",
           'summary' => "Lorem ipsum",
           'format' => filter_default_format(),
-        ]
+        ],
       ],
       'field_test_multi' => [
         ['value' => "one"],
@@ -263,7 +259,7 @@ class FieldEncryptTest extends WebTestBase {
           'value' => "Lorem ipsum dolor sit amet.",
           'summary' => "Lorem ipsum",
           'format' => filter_default_format(),
-        ]
+        ],
       ],
       'field_test_multi' => [
         ['value' => "one"],
@@ -330,7 +326,7 @@ class FieldEncryptTest extends WebTestBase {
           'value' => "This is some english text.",
           'summary' => "English text",
           'format' => filter_default_format(),
-        ]
+        ],
       ],
       'field_test_multi' => [
         ['value' => "one"],
@@ -350,7 +346,7 @@ class FieldEncryptTest extends WebTestBase {
           'value' => "Ceci est un text francais.",
           'summary' => "Text francais",
           'format' => filter_default_format(),
-        ]
+        ],
       ],
       'field_test_multi' => [
         ['value' => "un"],

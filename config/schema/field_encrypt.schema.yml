@@ -28,4 +28,6 @@ field_encrypt.settings:
         sequence:
           type: string
           label: 'Property name'
-
+    batch_size:
+      type: integer
+      label: 'Batch size'

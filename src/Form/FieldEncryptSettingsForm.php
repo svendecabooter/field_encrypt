@@ -69,10 +69,11 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
     $default_properties = $config->get('default_properties');
 
     $form['default_properties'] = array(
-      '#type' => 'container',
+      '#type' => 'details',
       '#title' => $this->t('Default properties'),
-      '#title_display' => FALSE,
+      '#description' => $this->t('Select which field properties will be checked by default on the field encryption settings form, per field type. Note that this does not change existing field settings, but merely sets sensible defaults.'),
       '#tree' => TRUE,
+      '#open' => TRUE,
     );
 
     // Gather valid field types.
@@ -100,6 +101,20 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
           '#default_value' => isset($default_properties[$name]) ? $default_properties[$name] : [],
         ];
       }
+
+      $form['batch_update'] = array(
+        '#type' => 'details',
+        '#title' => $this->t('Batch update settings'),
+        '#description' => $this->t('Configure behaviour of the batch field update feature. When changing field encryption settings for fields that already contain data, a batch process will be started that updates the existing field values according to the new settings.'),
+        '#open' => TRUE,
+      );
+
+      $form['batch_update']['batch_size'] = array(
+        '#type' => 'number',
+        '#title' => $this->t('Batch size'),
+        '#default_value' => $config->get('batch_size'),
+        '#description' => $this->t('Specify the number of entities to process on each field update batch execution. It is recommended to keep this number low, to avoid timeouts.'),
+      );
     }
 
     return $form;
@@ -120,6 +135,7 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
 
     $this->config('field_encrypt.settings')
       ->set('default_properties', $default_properties)
+      ->set('batch_size', $form_state->getValue('batch_size'))
       ->save();
 
     parent::submitForm($form, $form_state);

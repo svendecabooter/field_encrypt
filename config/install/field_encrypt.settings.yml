@@ -19,3 +19,4 @@ default_properties:
     - title
   telephone:
     - value
+batch_size: 5
