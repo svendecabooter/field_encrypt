@@ -23,12 +23,14 @@ interface EncryptedFieldValueManagerInterface {
    *   The entity to process.
    * @param string $field_name
    *   The field name to save.
+   * @param int $delta
+   *   The field delta to save.
    * @param string $property
    *   The field property to save.
    * @param string $encrypted_value
    *   The encrypted value to save.
    */
-  public function saveEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $property, $encrypted_value);
+  public function saveEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property, $encrypted_value);
 
   /**
    * Get an encrypted field value.
@@ -37,13 +39,15 @@ interface EncryptedFieldValueManagerInterface {
    *   The entity to process.
    * @param string $field_name
    *   The field name to retrieve.
+   * @param int $delta
+   *   The field delta to retrieve.
    * @param string $property
    *   The field property to retrieve.
    *
    * @return string
    *   The encrypted field value.
    */
-  public function getEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $property);
+  public function getEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property);
 
   /**
    * Delete encrypted field values for a given entity.
@@ -52,5 +56,15 @@ interface EncryptedFieldValueManagerInterface {
    *   The entity to be deleted.
    */
   public function deleteEncryptedFieldValues(ContentEntityInterface $entity);
+
+  /**
+   * Delete encrypted field values for a given field.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity containing the field to be deleted.
+   * @param string $field_name
+   *   The field name to delete encrypted values for.
+   */
+  public function deleteEncryptedFieldValuesForField(ContentEntityInterface $entity, $field_name);
 
 }

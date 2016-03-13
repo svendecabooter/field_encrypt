@@ -62,6 +62,11 @@ class EncryptedFieldValue extends ContentEntityBase implements EncryptedFieldVal
       ->setSetting('is_ascii', TRUE)
       ->setSetting('max_length', FieldStorageConfig::NAME_MAX_LENGTH);
 
+    $fields['field_delta'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Field delta'))
+      ->setDescription(t('The field delta.'))
+      ->setSetting('unsigned', TRUE);
+
     $fields['field_property'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Field property'))
       ->setDescription(t('The field property for which to store the encrypted value.'))
