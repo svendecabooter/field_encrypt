@@ -219,16 +219,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   Boolean indicating whether to encrypt the field.
    */
   protected function checkField(FieldItemListInterface $field) {
-    if (!is_callable([$field, 'getFieldDefinition'])) {
-      return FALSE;
-    }
-
     /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
     $definition = $field->getFieldDefinition();
-
-    if (!is_callable([$definition, 'get'])) {
-      return FALSE;
-    }
 
     /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
     $storage = $definition->get('fieldStorage');
