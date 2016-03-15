@@ -132,7 +132,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   /**
    * {@inheritdoc}
    */
-  public function deleteEncryptedFieldValuesForField($entity, $field_name) {
+  public function deleteEncryptedFieldValuesForField(ContentEntityInterface $entity, $field_name) {
     $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
       'entity_type' => $entity->getEntityTypeId(),
       'field_name' => $field_name,
