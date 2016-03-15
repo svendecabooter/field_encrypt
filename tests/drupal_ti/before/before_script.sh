@@ -20,7 +20,7 @@ mkdir -p "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 cd "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 
 # Download the dependencies
-cd "$DRUPAL_TI_DRUPAL_DIR"
+# cd "$DRUPAL_TI_DRUPAL_DIR"
 drush dl composer_manager --dev -y
 drush dl key --dev -y
 drush dl encrypt --dev -y
