@@ -16,7 +16,7 @@ cd "$DRUPAL_TI_DRUPAL_DIR"
 # Create the the module directory (only necessary for D7)
 # For D7, this is sites/default/modules
 # For D8, this is modules
-# mkdir -p "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
+mkdir -p "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 cd "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 
 # Download the dependencies
