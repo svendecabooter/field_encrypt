@@ -6,3 +6,9 @@ services:
   field_encrypt.encrypted_field_value_manager:
     class: Drupal\field_encrypt\EncryptedFieldValueManager
     arguments: ['@entity_type.manager', '@entity.query']
+
+  field_encrypt.config_subscriber:
+    class: Drupal\field_encrypt\EventSubscriber\ConfigSubscriber
+    arguments: ['@config.factory', '@entity_type.manager', '@entity.query']
+    tags:
+      - { name: event_subscriber }
