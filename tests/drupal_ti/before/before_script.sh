@@ -16,9 +16,11 @@ cd "$DRUPAL_TI_DRUPAL_DIR"
 # Create the the module directory (only necessary for D7)
 # For D7, this is sites/default/modules
 # For D8, this is modules
-# mkdir -p "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
+mkdir -p "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 cd "$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
 
-# Manually clone the dependencies
-git clone --depth 1 https://github.com/d8-contrib-modules/encrypt.git
-git clone --depth 1 https://github.com/d8-contrib-modules/key.git
+# Download the dependencies
+# cd "$DRUPAL_TI_DRUPAL_DIR"
+drush dl composer_manager --dev -y --destination="$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
+drush dl key --dev -y --destination="$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
+drush dl encrypt --dev -y --destination="$DRUPAL_TI_DRUPAL_DIR/$DRUPAL_TI_MODULES_PATH"
