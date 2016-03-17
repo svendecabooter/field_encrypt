@@ -21,7 +21,7 @@ env:
     - PATH="$PATH:$HOME/.composer/vendor/bin"
 
     # Configuration variables.
-    #- DRUPAL_TI_MODULE_NAME="field_encrypt"
+    - DRUPAL_TI_MODULE_NAME="field_encrypt"
     - DRUPAL_TI_SIMPLETEST_GROUP="field_encrypt"
 
     # Define runners and environment vars to include before and after the
@@ -96,8 +96,8 @@ install:
 
 before_script:
   # We run our script to add module dependencies
-  - drupal-ti before_script
   - drupal-ti --include drupal_ti/before/before_script.sh
+  - drupal-ti before_script
   - drupal-ti --include drupal_ti/after/before_script.sh
 
 script:
