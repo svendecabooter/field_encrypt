@@ -9,24 +9,20 @@ namespace Drupal\field_encrypt\EventSubscriber;
 
 use Drupal\Core\Config\ConfigCrudEvent;
 use Drupal\Core\Config\ConfigEvents;
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Queue\QueueFactory;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\Url;
 use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\field_encrypt\EncryptedFieldValueRunBatch;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Updates existing data when field encryption settings are updated.
  */
 class ConfigSubscriber implements EventSubscriberInterface {
-
-  /**
-   * The configuration factory.
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  protected $configFactory;
+  use StringTranslationTrait;
 
   /**
    * The entity type manager service.
@@ -43,19 +39,30 @@ class ConfigSubscriber implements EventSubscriberInterface {
   protected $entityQuery;
 
   /**
+   * The queue factory.
+   *
+   * @var \Drupal\Core\Queue\QueueFactory
+   */
+  protected $queueFactory;
+
+
+  /**
    * Constructs a new ConfigSubscriber object.
    *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The configuration factory.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_manager
    *   The entity type manager service.
    * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query
    *   The entity query service.
+   * @param \Drupal\Core\Queue\QueueFactory $queue_factory
+   *   The queue factory.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
+   *   The string translation service.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query) {
-    $this->configFactory = $config_factory;
+  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation) {
     $this->entityManager = $entity_manager;
     $this->entityQuery = $entity_query;
+    $this->queueFactory = $queue_factory;
+    $this->stringTranslation = $translation;
   }
 
   /**
@@ -63,7 +70,6 @@ class ConfigSubscriber implements EventSubscriberInterface {
    */
   public static function getSubscribedEvents() {
     $events[ConfigEvents::SAVE][] = array('onConfigSave', 0);
-    $events[ConfigEvents::IMPORT][] = array('onConfigImport', 0);
     return $events;
   }
 
@@ -88,8 +94,8 @@ class ConfigSubscriber implements EventSubscriberInterface {
       $field_storage_config = FieldStorageConfig::loadByName($entity_type, $field_name);
       if ($field_storage_config) {
         if ($field_storage_config->hasData()) {
-          // Get entities that need updating, because they contain the field that has
-          // its field encryption settings updated.
+          // Get entities that need updating, because they contain the field
+          // that has its field encryption settings updated.
           $query = $this->entityQuery->get($entity_type);
           // Check if the field is present.
           $query->exists($field_name);
@@ -99,38 +105,25 @@ class ConfigSubscriber implements EventSubscriberInterface {
           }
           $entity_ids = $query->execute();
 
-          // Configure the batch operation to be called, with the appropriate
-          // parameters to process the loaded entity IDs that need updating.
-          $batch = [
-            'title' => t('Updating field encryption'),
-            'operations' => [
-              [
-                [EncryptedFieldValueRunBatch::class, 'processBatch'],
-                [array_keys($entity_ids), $field_name, $entity_type, $original_config]
-              ]
-            ],
-            'finished' => [EncryptedFieldValueRunBatch::class, 'finishBatch'],
-            'progressive' => TRUE,
-          ];
-          batch_set($batch);
-          //return batch_process();
+          if (!empty($entity_ids)) {
+            // Call the Queue API and add items for processing.
+            /** @var QueueInterface $queue */
+            $queue = $this->queueFactory->get('cron_encrypted_field_update');
+
+            foreach (array_keys($entity_ids) as $entity_id) {
+              $data = [
+                "entity_id" => $entity_id,
+                "field_name" => $field_name,
+                "entity_type" => $entity_type,
+                "original_config" => $original_config,
+              ];
+              $queue->createItem($data);
+            }
+          }
+
+          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed on cron. You can also <a href=":url">run this process manually</a>.', array(':url' => Url::fromRoute('field_encrypt.field_update')->toString())));
         }
       }
-    }
-  }
-
-  /**
-   * React on the configuration import event.
-   *
-   * @param ConfigCrudEvent $event
-   *   The configuration event.
-   */
-  public function onConfigImport(ConfigCrudEvent $event) {
-    $config = $event->getConfig();
-    if (substr($config->getName(), 0, 14) == 'field.storage.' && $event->isChanged('third_party_settings.field_encrypt')) {
-      // Get both the newly saved and original field_encrypt configuration.
-      $new_config = $config->get('third_party_settings.field_encrypt');
-      $original_config = $config->getOriginal('third_party_settings.field_encrypt');
     }
   }
 

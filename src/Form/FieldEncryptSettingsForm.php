@@ -44,7 +44,6 @@ class FieldEncryptSettingsForm extends ConfigFormBase {
     );
   }
 
-
   /**
    * {@inheritdoc}
    */

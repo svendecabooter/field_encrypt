@@ -5,3 +5,11 @@ field_encrypt.settings:
     _title: 'Field Encrypt settings'
   requirements:
     _permission: 'administer field encryption'
+
+field_encrypt.field_update:
+  path: '/admin/config/system/field_encrypt/field_update'
+  defaults:
+    _form: '\Drupal\field_encrypt\Form\FieldEncryptUpdateForm'
+    _title: 'Update fields'
+  requirements:
+    _permission: 'administer field encryption'
