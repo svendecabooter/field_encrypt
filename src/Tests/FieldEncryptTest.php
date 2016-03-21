@@ -183,7 +183,7 @@ class FieldEncryptTest extends WebTestBase {
    * Test encrypting fields.
    */
   public function testEncryptField() {
-    $this->setFieldStorageSettings();
+    $this->setFieldStorageSettings(TRUE);
 
     // Save test entity.
     $test_node = Node::create([
@@ -242,13 +242,72 @@ class FieldEncryptTest extends WebTestBase {
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
+
+    // Test updating entities with alternative encryption settings.
+    $this->setFieldStorageSettings(TRUE, TRUE);
+    // Update existing data with new field encryption settings.
+    $this->assertLinkByHref('admin/config/system/field_encrypt/field_update');
+    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertText('There are 2 fields queued for encryption updates.');
+    $this->cronRun();
+    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertText('There are 0 fields queued for encryption updates.');
+
+    // Check existence of EncryptedFieldValue entities.
+    $encrypted_field_values = EncryptedFieldValue::loadMultiple();
+    $this->assertEqual(5, count($encrypted_field_values));
+
+    // Check if text is displayed unencrypted.
+    $this->drupalGet('node/' . $test_node->id());
+    $this->assertText("Lorem ipsum dolor sit amet.");
+    $this->assertText("one");
+    $this->assertText("two");
+    $this->assertText("three");
+
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $this->assertEqual("[ENCRYPTED]", $result);
+
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    foreach ($result as $record) {
+      $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
+    }
+
+    // Test updating entities to remove field encryption.
+    $this->setFieldStorageSettings(FALSE);
+    // Update existing data with new field encryption settings.
+    $this->assertLinkByHref('admin/config/system/field_encrypt/field_update');
+    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertText('There are 2 fields queued for encryption updates.');
+    $this->cronRun();
+    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertText('There are 0 fields queued for encryption updates.');
+
+    // Check removal of EncryptedFieldValue entities.
+    $encrypted_field_values = EncryptedFieldValue::loadMultiple();
+    $this->assertEqual(0, count($encrypted_field_values));
+
+    // Check if text is displayed unencrypted.
+    $this->drupalGet('node/' . $test_node->id());
+    $this->assertText("Lorem ipsum dolor sit amet.");
+    $this->assertText("one");
+    $this->assertText("two");
+    $this->assertText("three");
+
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $this->assertEqual("Lorem ipsum dolor sit amet.", $result);
+
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $valid_values = ["one", "two", "three"];
+    foreach ($result as $record) {
+      $this->assertTrue(in_array($record->field_test_multi_value, $valid_values));
+    }
   }
 
   /**
    * Test encrypting fields with revisions.
    */
   public function testEncryptFieldRevision() {
-    $this->setFieldStorageSettings();
+    $this->setFieldStorageSettings(TRUE);
 
     // Save test entity.
     $test_node = Node::create([
@@ -315,7 +374,7 @@ class FieldEncryptTest extends WebTestBase {
    */
   public function testEncryptFieldTranslation() {
     $this->setTranslationSettings();
-    $this->setFieldStorageSettings();
+    $this->setFieldStorageSettings(TRUE);
 
     // Save test entity.
     $test_node = Node::create([
@@ -389,29 +448,32 @@ class FieldEncryptTest extends WebTestBase {
   /**
    * Set up storage settings for test fields.
    */
-  protected function setFieldStorageSettings() {
+  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE) {
     // Set up storage settings for first field.
     $this->drupalGet('admin/structure/types/manage/page/fields/node.page.field_test_single/storage');
     $this->assertFieldByName('field_encrypt[encrypt]', NULL, 'Encrypt field found.');
     $this->assertFieldByName('field_encrypt[encryption_profile]', NULL, 'Encryption profile field found.');
 
+    $profile_id = ($alternate == TRUE) ? 'encryption_profile_2' : 'encryption_profile_1';
     $edit = [
-      'field_encrypt[encrypt]' => 1,
+      'field_encrypt[encrypt]' => $encryption,
       'field_encrypt[properties][value]' => 'value',
       'field_encrypt[properties][summary]' => 'summary',
-      'field_encrypt[encryption_profile]' => 'encryption_profile_1',
+      'field_encrypt[encryption_profile]' => $profile_id,
     ];
     $this->drupalPostForm(NULL, $edit, t('Save field settings'));
+    $this->drupalGet('admin/structure/types/manage/page/fields/node.page.field_test_single/storage');
 
     // Set up storage settings for second field.
     $this->drupalGet('admin/structure/types/manage/page/fields/node.page.field_test_multi/storage');
     $this->assertFieldByName('field_encrypt[encrypt]', NULL, 'Encrypt field found.');
     $this->assertFieldByName('field_encrypt[encryption_profile]', NULL, 'Encryption profile field found.');
 
+    $profile_id = ($alternate == TRUE) ? 'encryption_profile_1' : 'encryption_profile_2';
     $edit = [
-      'field_encrypt[encrypt]' => 1,
+      'field_encrypt[encrypt]' => $encryption,
       'field_encrypt[properties][value]' => 'value',
-      'field_encrypt[encryption_profile]' => 'encryption_profile_2',
+      'field_encrypt[encryption_profile]' => $profile_id,
     ];
     $this->drupalPostForm(NULL, $edit, t('Save field settings'));
   }
