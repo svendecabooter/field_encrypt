@@ -121,7 +121,7 @@ class ConfigSubscriber implements EventSubscriberInterface {
             }
           }
 
-          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed on cron. You can also <a href=":url">run this process manually</a>.', array(':url' => Url::fromRoute('field_encrypt.field_update')->toString())));
+          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed. You should immediately <a href=":url">run this process manually</a>. Alternatively, the updates will be performed automatically by cron.', array(':url' => Url::fromRoute('field_encrypt.field_update')->toString())));
         }
       }
     }

@@ -246,11 +246,11 @@ class FieldEncryptTest extends WebTestBase {
     // Test updating entities with alternative encryption settings.
     $this->setFieldStorageSettings(TRUE, TRUE);
     // Update existing data with new field encryption settings.
-    $this->assertLinkByHref('admin/config/system/field_encrypt/field_update');
-    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertLinkByHref('admin/config/system/field-encrypt/field-update');
+    $this->drupalGet('admin/config/system/field-encrypt/field-update');
     $this->assertText('There are 2 fields queued for encryption updates.');
     $this->cronRun();
-    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->drupalGet('admin/config/system/field-encrypt/field-update');
     $this->assertText('There are 0 fields queued for encryption updates.');
 
     // Check existence of EncryptedFieldValue entities.
@@ -275,11 +275,11 @@ class FieldEncryptTest extends WebTestBase {
     // Test updating entities to remove field encryption.
     $this->setFieldStorageSettings(FALSE);
     // Update existing data with new field encryption settings.
-    $this->assertLinkByHref('admin/config/system/field_encrypt/field_update');
-    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->assertLinkByHref('admin/config/system/field-encrypt/field-update');
+    $this->drupalGet('admin/config/system/field-encrypt/field-update');
     $this->assertText('There are 2 fields queued for encryption updates.');
     $this->cronRun();
-    $this->drupalGet('admin/config/system/field_encrypt/field_update');
+    $this->drupalGet('admin/config/system/field-encrypt/field-update');
     $this->assertText('There are 0 fields queued for encryption updates.');
 
     // Check removal of EncryptedFieldValue entities.
