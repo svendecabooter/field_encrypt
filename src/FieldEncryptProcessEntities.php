@@ -279,7 +279,14 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       // Return value to store for unencrypted property.
       // We can't set this to NULL, because then the field values are not saved,
       // so we can't replace them with their unencrypted value on load.
-      return '[ENCRYPTED]';
+      $unencrypted_storage_value = '[ENCRYPTED]';
+      $context = [
+        "entity" => $entity,
+        "field" => $field,
+        "property" => $property_name
+      ];
+      \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
+      return $unencrypted_storage_value;
 
     }
     elseif ($op === 'decrypt') {
