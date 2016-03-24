@@ -7,6 +7,8 @@
 
 namespace Drupal\Tests\field_encrypt\Unit;
 
+use Drupal\Core\DependencyInjection\ContainerBuilder;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\field_encrypt\FieldEncryptProcessEntities;
 use Drupal\Tests\UnitTestCase;
 
@@ -152,6 +154,13 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
     $this->encryptedFieldValueManager = $this->getMockBuilder('\Drupal\field_encrypt\EncryptedFieldValueManagerInterface')
       ->disableOriginalConstructor()
       ->getMock();
+
+    $container = new ContainerBuilder();
+    $module_handler = $this->getMock(ModuleHandlerInterface::class);
+    $module_handler->expects($this->any())
+      ->method('alter');
+    $container->set('module_handler', $module_handler);
+    \Drupal::setContainer($container);
   }
 
   /**

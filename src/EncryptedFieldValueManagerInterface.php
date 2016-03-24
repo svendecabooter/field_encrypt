@@ -17,7 +17,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
 interface EncryptedFieldValueManagerInterface {
 
   /**
-   * Save an encrypted field value.
+   * Create an encrypted field value, or update an existing one.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The entity to process.
@@ -29,8 +29,19 @@ interface EncryptedFieldValueManagerInterface {
    *   The field property to save.
    * @param string $encrypted_value
    *   The encrypted value to save.
+   *
+   * @return \Drupal\field_encrypt\Entity\EncryptedFieldValueInterface
+   *   The created EncryptedFieldValue entity.
    */
-  public function saveEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property, $encrypted_value);
+  public function createEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property, $encrypted_value);
+
+  /**
+   * Save encrypted field values and link them to their parent entity.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to save EncryptedFieldValue entities for.
+   */
+  public function saveEncryptedFieldValues(ContentEntityInterface $entity);
 
   /**
    * Get an encrypted field value.
