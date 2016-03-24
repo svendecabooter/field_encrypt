@@ -190,6 +190,10 @@ class FieldEncryptTest extends WebTestBase {
 
   /**
    * Test encrypting fields.
+   *
+   * This test also covers changing field encryption settings when existing
+   * data already exists, as well as making fields unencrypted again with
+   * data unencryption support.
    */
   public function testEncryptField() {
     $this->setFieldStorageSettings(TRUE);
@@ -273,6 +277,7 @@ class FieldEncryptTest extends WebTestBase {
     $this->assertText("two");
     $this->assertText("three");
 
+    // Check values saved in the database.
     $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
     $this->assertEqual("[ENCRYPTED]", $result);
 
@@ -314,6 +319,8 @@ class FieldEncryptTest extends WebTestBase {
 
   /**
    * Test encrypting fields with revisions.
+   *
+   * This test also covers deletion of an encrypted field with existing data.
    */
   public function testEncryptFieldRevision() {
     $this->setFieldStorageSettings(TRUE);
@@ -373,6 +380,7 @@ class FieldEncryptTest extends WebTestBase {
     $this->assertText("two");
     $this->assertText("three");
 
+    // Check values saved in the database.
     $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node_revision__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
     $this->assertEqual("[ENCRYPTED]", $result);
 
@@ -380,6 +388,15 @@ class FieldEncryptTest extends WebTestBase {
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
+
+    $edit = [
+      'confirm' => TRUE,
+    ];
+    $this->drupalPostForm('admin/structure/types/manage/page/fields/node.page.field_test_multi/delete', $edit, t('Delete'));
+
+    // Test if EncryptedFieldValue entities got deleted.
+    $encrypted_field_values = EncryptedFieldValue::loadMultiple();
+    $this->assertEqual(4, count($encrypted_field_values));
   }
 
   /**
@@ -452,6 +469,7 @@ class FieldEncryptTest extends WebTestBase {
     $this->assertText("deux");
     $this->assertText("trois");
 
+    // Check values saved in the database.
     $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_single_value);
