@@ -25,13 +25,34 @@ You can change the default properties that will be selected per field type, on a
 per-site basis:
 
 - Go to Administration > Configuration > System > Field Encrypt settings
-  (/admin/config/system/field_encrypt).
+  (/admin/config/system/field-encrypt).
 - Choose which properties should be selected by default for encryption, when
   setting up field encryption for the available field types.
  
 Note: changes to the settings form do not persist to the field config or field 
 value encryption - these are merely default settings that are set ONLY when 
 a field is set up for encryption the first time.
+
+## Updating field encryption settings
+
+This module allows you to change the encryption settings of fields, even when 
+they already contain field data. However you should use this feature with great
+care. It is very important to make sure you have a decent backup strategy in 
+place and perform the updates in a controlled environment, to avoid data loss or
+data corruption.
+
+You can change the field settings from unencrypted to encrypted, change to 
+another encryption method, or change from encrypted to unencrypted. Make sure 
+you properly tested your encryption methods before starting a field update!
+
+After changing the settings through the Field UI or by importing configuration
+through CMI, you can check the field update status at 
+/admin/config/system/field-encrypt/field-update. When clicking the "Update 
+encryption on existing fields" button, a batch process will be started to update
+field values on existing entities, to make them compatible with the new setting.
+It is recommended to run this process immediately after updating your 
+configuration, to avoid problems with your data. If you don't perform this 
+action manually, the fields will be updated automatically via cron.
 
 ## Architecture Documentation
 

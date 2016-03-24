@@ -338,7 +338,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
 
     // Deactivate encryption if field is no longer encrypted.
     if (!$this->checkField($field)) {
-      $this->encryptedFieldValueManager->deleteEncryptedFieldValuesForField($entity, $field_name);
+      $this->encryptedFieldValueManager->deleteEntityEncryptedFieldValuesForField($entity, $field_name);
     }
   }
 
