@@ -119,7 +119,7 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   /**
    * {@inheritdoc}
    */
-  public function deleteEncryptedFieldValues(ContentEntityInterface $entity) {
+  public function deleteEntityEncryptedFieldValues(ContentEntityInterface $entity) {
     $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
       'entity_type' => $entity->getEntityTypeId(),
       'entity_id' => $entity->id(),
@@ -132,11 +132,24 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   /**
    * {@inheritdoc}
    */
-  public function deleteEncryptedFieldValuesForField(ContentEntityInterface $entity, $field_name) {
+  public function deleteEntityEncryptedFieldValuesForField(ContentEntityInterface $entity, $field_name) {
     $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
       'entity_type' => $entity->getEntityTypeId(),
       'field_name' => $field_name,
       'entity_revision_id' => $this->getEntityRevisionId($entity),
+    ]);
+    if ($field_values) {
+      $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function deleteEncryptedFieldValuesForField($entity_type, $field_name) {
+    $field_values = $this->entityManager->getStorage('encrypted_field_value')->loadByProperties([
+      'entity_type' => $entity_type,
+      'field_name' => $field_name,
     ]);
     if ($field_values) {
       $this->entityManager->getStorage('encrypted_field_value')->delete($field_values);

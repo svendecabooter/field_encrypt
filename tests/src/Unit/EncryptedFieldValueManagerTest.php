@@ -240,12 +240,12 @@ class EncryptedFieldValueManagerTest extends UnitTestCase {
   }
 
   /**
-   * Test the deleteEncryptedFieldValues method.
+   * Test the deleteEntityEncryptedFieldValues method.
    *
    * @covers ::__construct
-   * @covers ::deleteEncryptedFieldValues
+   * @covers ::deleteEntityEncryptedFieldValues
    */
-  public function testDeleteEncryptedFieldValues() {
+  public function testDeleteEntityEncryptedFieldValues() {
     // Set up expectations for storage.
     $this->storage->expects($this->once())
       ->method('loadByProperties')
@@ -259,17 +259,17 @@ class EncryptedFieldValueManagerTest extends UnitTestCase {
       $this->entityQuery
     );
 
-    $service->deleteEncryptedFieldValues($this->entity);
+    $service->deleteEntityEncryptedFieldValues($this->entity);
   }
 
   /**
-   * Test the deleteEncryptedFieldValuesForField method.
+   * Test the deleteEntityEncryptedFieldValuesForField method.
    *
    * @covers ::__construct
-   * @covers ::deleteEncryptedFieldValuesForField
+   * @covers ::deleteEntityEncryptedFieldValuesForField
    * @covers ::getEntityRevisionId
    */
-  public function testDeleteEncryptedFieldValuesForField() {
+  public function testDeleteEntityEncryptedFieldValuesForField() {
     // Set up expectations for storage.
     $this->storage->expects($this->once())
       ->method('loadByProperties')
@@ -305,7 +305,30 @@ class EncryptedFieldValueManagerTest extends UnitTestCase {
       $this->entityQuery
     );
 
-    $service->deleteEncryptedFieldValuesForField($this->entity, 'field_test');
+    $service->deleteEntityEncryptedFieldValuesForField($this->entity, 'field_test');
+  }
+
+  /**
+   * Test the deleteEncryptedFieldValuesForField method.
+   *
+   * @covers ::__construct
+   * @covers ::deleteEncryptedFieldValuesForField
+   */
+  public function testDeleteEncryptedFieldValuesForField() {
+    // Set up expectations for storage.
+    $this->storage->expects($this->once())
+      ->method('loadByProperties')
+      ->will($this->returnValue([$this->encryptedFieldValue]));
+
+    $this->storage->expects($this->once())
+      ->method('delete');
+
+    $service = new EncryptedFieldValueManager(
+      $this->entityManager,
+      $this->entityQuery
+    );
+
+    $service->deleteEncryptedFieldValuesForField('node', 'field_test');
   }
 
 }

@@ -211,7 +211,7 @@ function field_encrypt_entity_storage_load($entities, $entity_type) {
 function field_encrypt_entity_delete(EntityInterface $entity) {
   if (field_encrypt_allow_encryption($entity)) {
     $encrypted_field_value_manager = \Drupal::service('field_encrypt.encrypted_field_value_manager');
-    $encrypted_field_value_manager->deleteEncryptedFieldValues($entity);
+    $encrypted_field_value_manager->deleteEntityEncryptedFieldValues($entity);
   }
 }
 

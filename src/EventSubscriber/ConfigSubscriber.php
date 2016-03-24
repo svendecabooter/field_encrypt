@@ -16,6 +16,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Url;
 use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\field_encrypt\EncryptedFieldValueManagerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -45,6 +46,12 @@ class ConfigSubscriber implements EventSubscriberInterface {
    */
   protected $queueFactory;
 
+  /**
+   * The EncryptedFieldValue entity manager.
+   *
+   * @var \Drupal\field_encrypt\EncryptedFieldValueManagerInterface
+   */
+  protected $encryptedFieldValueManager;
 
   /**
    * Constructs a new ConfigSubscriber object.
@@ -57,12 +64,15 @@ class ConfigSubscriber implements EventSubscriberInterface {
    *   The queue factory.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
    *   The string translation service.
+   * @param \Drupal\field_encrypt\EncryptedFieldValueManagerInterface $encrypted_field_value_manager
+   *   The EncryptedFieldValue entity manager.
    */
-  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation) {
+  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation, EncryptedFieldValueManagerInterface $encrypted_field_value_manager) {
     $this->entityManager = $entity_manager;
     $this->entityQuery = $entity_query;
     $this->queueFactory = $queue_factory;
     $this->stringTranslation = $translation;
+    $this->encryptedFieldValueManager = $encrypted_field_value_manager;
   }
 
   /**
@@ -70,6 +80,7 @@ class ConfigSubscriber implements EventSubscriberInterface {
    */
   public static function getSubscribedEvents() {
     $events[ConfigEvents::SAVE][] = array('onConfigSave', 0);
+    $events[ConfigEvents::DELETE][] = array('onConfigDelete', 0);
     return $events;
   }
 
@@ -100,7 +111,9 @@ class ConfigSubscriber implements EventSubscriberInterface {
           // Check if the field is present.
           $query->exists($field_name);
           // Make sure to get all revisions for revisionable entities.
-          if ($this->entityManager->getDefinition($entity_type)->hasKey('revision')) {
+          if ($this->entityManager->getDefinition($entity_type)
+            ->hasKey('revision')
+          ) {
             $query->allRevisions();
           }
           $entity_ids = $query->execute();
@@ -121,9 +134,28 @@ class ConfigSubscriber implements EventSubscriberInterface {
             }
           }
 
-          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed. You should immediately <a href=":url">run this process manually</a>. Alternatively, the updates will be performed automatically by cron.', array(':url' => Url::fromRoute('field_encrypt.field_update')->toString())));
+          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed. You should immediately <a href=":url">run this process manually</a>. Alternatively, the updates will be performed automatically by cron.', array(
+            ':url' => Url::fromRoute('field_encrypt.field_update')
+              ->toString()
+          )));
         }
       }
+    }
+  }
+
+  /**
+   * React on the configuration delete event.
+   *
+   * @param ConfigCrudEvent $event
+   *   The configuration event.
+   */
+  public function onConfigDelete(ConfigCrudEvent $event) {
+    $config = $event->getConfig();
+    if (substr($config->getName(), 0, 14) == 'field.storage.') {
+      // Get the entity type and field from the changed config key.
+      $storage_name = substr($config->getName(), 14);
+      list($entity_type, $field_name) = explode('.', $storage_name, 2);
+      $this->encryptedFieldValueManager->deleteEncryptedFieldValuesForField($entity_type, $field_name);
     }
   }
 
