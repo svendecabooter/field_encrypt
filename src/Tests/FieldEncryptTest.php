@@ -73,10 +73,19 @@ class FieldEncryptTest extends WebTestBase {
   protected $nodeType;
 
   /**
+   * The entity manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityManagerInterface
+   */
+  protected $entityManager;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp() {
     parent::setUp();
+
+    $this->entityManager = $this->container->get('entity.manager');
 
     // Create an admin user.
     $this->adminUser = $this->drupalCreateUser([
@@ -342,6 +351,10 @@ class FieldEncryptTest extends WebTestBase {
     $multi_field->setValue($multi_field_value);
     $test_node->save();
 
+    // Ensure that the node revision has been created.
+    $this->entityManager->getStorage('node')->resetCache(array($test_node->id()));
+    $this->assertNotIdentical($test_node->getRevisionId(), $old_revision_id, 'A new revision has been created.');
+
     // Check existence of EncryptedFieldValue entities.
     $encrypted_field_values = EncryptedFieldValue::loadMultiple();
     $this->assertEqual(10, count($encrypted_field_values));
@@ -396,6 +409,11 @@ class FieldEncryptTest extends WebTestBase {
     ]);
     $test_node->enforceIsNew(TRUE);
     $test_node->save();
+
+    // Reload node after saving.
+    $controller = $this->entityManager->getStorage($test_node->getEntityTypeId());
+    $controller->resetCache(array($test_node->id()));
+    $test_node = $controller->load($test_node->id());
 
     // Add translated values.
     $translated_values = [
@@ -489,7 +507,7 @@ class FieldEncryptTest extends WebTestBase {
     \Drupal::service('content_translation.manager')
       ->setEnabled('node', 'page', TRUE);
     drupal_static_reset();
-    \Drupal::entityManager()->clearCachedDefinitions();
+    $this->entityManager->clearCachedDefinitions();
     \Drupal::service('router.builder')->rebuild();
     \Drupal::service('entity.definition_update_manager')->applyUpdates();
     $this->rebuildContainer();

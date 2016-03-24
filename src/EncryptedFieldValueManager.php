@@ -11,6 +11,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\field_encrypt\Entity\EncryptedFieldValue;
+use Drupal\field_encrypt\Entity\EncryptedFieldValueInterface;
 
 /**
  * Manager containing common functions to manage EncryptedFieldValue entities.
@@ -47,16 +48,22 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   /**
    * {@inheritdoc}
    */
-  public function saveEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property, $encrypted_value) {
+  public function createEncryptedFieldValue(ContentEntityInterface $entity, $field_name, $delta, $property, $encrypted_value) {
     $langcode = $entity->language()->getId();
     if ($encrypted_field_value = $this->getExistingEntity($entity, $field_name, $delta, $property)) {
-      $translation = $encrypted_field_value->hasTranslation($langcode) ? $encrypted_field_value->getTranslation($langcode) : $encrypted_field_value->addTranslation($langcode);
-      $translation->setEncryptedValue($encrypted_value);
+      // Update an existing encrypted field value, taking into account the
+      // parent entity language.
+      $encrypted_field_value = $encrypted_field_value->hasTranslation($langcode) ? $encrypted_field_value->getTranslation($langcode) : $encrypted_field_value->addTranslation($langcode);
+      $encrypted_field_value->setEncryptedValue($encrypted_value);
+      $encrypted_field_value->save();
     }
     else {
+      // Create a new EncryptedFieldValue entity. The parent entity's (revision)
+      // id might not be known yet, so the EncryptedFieldValue will be saved
+      // by saveEncryptedFieldValues() later on.
       $encrypted_field_value = EncryptedFieldValue::create([
         'entity_type' => $entity->getEntityTypeId(),
-        'entity_id' => $entity->id(),
+        'entity_id' => !$entity->isNew() ? $entity->id() : NULL,
         'entity_revision_id' => $this->getEntityRevisionId($entity),
         'field_name' => $field_name,
         'field_property' => $property,
@@ -64,10 +71,28 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
         'encrypted_value' => $encrypted_value,
         'langcode' => $langcode,
       ]);
+      $entity->encrypted_field_values[] = $encrypted_field_value;
     }
-    $encrypted_field_value->save();
+    return $encrypted_field_value;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function saveEncryptedFieldValues(ContentEntityInterface $entity) {
+    if (!empty($entity->encrypted_field_values)) {
+      foreach ($entity->encrypted_field_values as $encrypted_field_value) {
+        if ($encrypted_field_value instanceof EncryptedFieldValueInterface) {
+          // Update the parent entity (revision) id, now that it's known.
+          $encrypted_field_value->set('entity_id', $entity->id());
+          $encrypted_field_value->set('entity_revision_id', $this->getEntityRevisionId($entity));
+          // Actually save the EncryptedFieldValue entity.
+          $encrypted_field_value->save();
+        }
+      }
+      unset($entity->encrypted_field_values);
+    }
+  }
 
   /**
    * {@inheritdoc}
@@ -166,6 +191,9 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
    *   The revision ID.
    */
   protected function getEntityRevisionId(ContentEntityInterface $entity) {
+    if ($entity->isNew()) {
+      return NULL;
+    }
     if ($entity->getEntityType()->hasKey('revision')) {
       $revision_id = $entity->getRevisionId();
     }

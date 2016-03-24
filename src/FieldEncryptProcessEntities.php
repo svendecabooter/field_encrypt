@@ -275,7 +275,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       // Encrypt property value.
       $processed_value = base64_encode($this->encryptService->encrypt($value, $encryption_profile));
       // Save encrypted value in EncryptedFieldValue entity.
-      $this->encryptedFieldValueManager->saveEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
+      $this->encryptedFieldValueManager->createEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
       // Return value to store for unencrypted property.
       // We can't set this to NULL, because then the field values are not saved,
       // so we can't replace them with their unencrypted value on load.
@@ -283,7 +283,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       $context = [
         "entity" => $entity,
         "field" => $field,
-        "property" => $property_name
+        "property" => $property_name,
       ];
       \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
       return $unencrypted_storage_value;
@@ -330,10 +330,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         $this->processField($entity, $field, 'decrypt', TRUE, $original_encryption_settings);
       }
     }
-
-    // Set flag to trigger field encryption in field_encrypt_entity_presave().
-    // This will re-encrypt the field with the new settings.
-    $entity->doFieldEncryption = TRUE;
     $entity->save();
 
     // Deactivate encryption if field is no longer encrypted.
