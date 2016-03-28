@@ -241,7 +241,7 @@ class FieldEncryptTest extends FieldEncryptTestBase {
 
     // Check if English text is displayed unencrypted.
     $this->drupalGet('node/' . $this->testNode->id());
-    $this->assertText("This is some english text.");
+    $this->assertText("Lorem ipsum dolor sit amet.");
     $this->assertText("one");
     $this->assertText("two");
     $this->assertText("three");
