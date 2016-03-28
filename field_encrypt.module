@@ -84,6 +84,19 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         ],
       );
 
+      // Add setting to decide if field should be excluded from cache.
+      $form['field_encrypt']['field_encrypt']['cache_exclude'] = [
+        '#type' => 'checkbox',
+        '#title' => t('Exclude from cache'),
+        '#description' => t('Exclude this field from being cached. This will make sure your unencrypted data will not be exposed in the cache, but could have impact on your performance.'),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'cache_exclude', TRUE),
+        '#states' => [
+          'visible' => [
+            ':input[name="field_encrypt[encrypt]"]' => array('checked' => TRUE),
+          ],
+        ],
+      ];
+
       // We add functions to process the form when it is saved.
       $form['#entity_builders'][] = 'field_encrypt_form_field_add_form_builder';
     }
@@ -105,7 +118,6 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
 function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\Entity\FieldStorageConfig $field_storage_config, &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   $field_encryption_settings = $form_state->getValue('field_encrypt');
   $field_encryption_settings['encrypt'] = (bool) $field_encryption_settings['encrypt'];
-  $original_encryption = $field_storage_config->getThirdPartySettings('field_encrypt');
 
   // If the form has the value, we set it.
   if ($field_encryption_settings['encrypt']) {
@@ -118,6 +130,7 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'encrypt');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'properties');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
+    $field_storage_config->unsetThirdPartySetting('field_encrypt', 'cache_exclude');
   }
 }
 

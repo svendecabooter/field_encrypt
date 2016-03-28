@@ -7,6 +7,7 @@
 
 namespace Drupal\field_encrypt\EventSubscriber;
 
+use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigCrudEvent;
 use Drupal\Core\Config\ConfigEvents;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -92,9 +93,8 @@ class ConfigSubscriber implements EventSubscriberInterface {
    */
   public function onConfigSave(ConfigCrudEvent $event) {
     $config = $event->getConfig();
-    if (substr($config->getName(), 0, 14) == 'field.storage.' && $event->isChanged('third_party_settings.field_encrypt')) {
-      // Get both the newly saved and original field_encrypt configuration.
-      $new_config = $config->get('third_party_settings.field_encrypt');
+    if (substr($config->getName(), 0, 14) == 'field.storage.' && $this->configChanged($config)) {
+      // Get the original field_encrypt configuration.
       $original_config = $config->getOriginal('third_party_settings.field_encrypt');
 
       // Get the entity type and field from the changed config key.
@@ -159,4 +159,23 @@ class ConfigSubscriber implements EventSubscriberInterface {
     }
   }
 
+  /**
+   * Check whether the field encryption config has changed.
+   *
+   * @param \Drupal\Core\Config\Config $config
+   *   The config to check.
+   *
+   * @return bool
+   *   Whether the config has changed.
+   */
+  protected function configChanged(Config $config) {
+    // Get both the newly saved and original field_encrypt configuration.
+    $new_config = $config->get('third_party_settings.field_encrypt');
+    $original_config = $config->getOriginal('third_party_settings.field_encrypt');
+
+    // Don't compare 'cache_exclude' setting.
+    unset($new_config['cache_exclude']);
+    unset($original_config['cache_exclude']);
+    return $new_config !== $original_config;
+  }
 }
