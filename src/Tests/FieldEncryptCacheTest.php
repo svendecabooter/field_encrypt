@@ -61,9 +61,6 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
    * Test caching of rendered entity.
    */
   public function testEntityRender() {
-    $render_controller = $this->container->get('entity.manager')->getViewBuilder($this->testNode->getEntityTypeId());
-    $this->verbose(print_r(get_class($render_controller), TRUE));
-
     // Check for max-age = 0 on entity with encrypted field.
     $build = $this->drupalBuildEntityView($this->testNode);
     // @TODO: this probably doesn't work because hook_entity_view isn't called.
