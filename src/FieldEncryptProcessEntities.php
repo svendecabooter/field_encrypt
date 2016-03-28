@@ -339,7 +339,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * {@inheritdoc}
    */
   public function entitySetCacheTags(ContentEntityInterface $entity, &$build) {
     foreach ($entity->getFields() as $field) {
