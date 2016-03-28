@@ -219,7 +219,7 @@ class FieldEncryptTestBase extends WebTestBase {
   /**
    * Set up storage settings for test fields.
    */
-  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE) {
+  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE, $cache_exclude = TRUE) {
     // Set up storage settings for first field.
     $this->drupalGet('admin/structure/types/manage/page/fields/node.page.field_test_single/storage');
     $this->assertFieldByName('field_encrypt[encrypt]', NULL, 'Encrypt field found.');
@@ -231,7 +231,7 @@ class FieldEncryptTestBase extends WebTestBase {
       'field_encrypt[properties][value]' => 'value',
       'field_encrypt[properties][summary]' => 'summary',
       'field_encrypt[encryption_profile]' => $profile_id,
-      'field_encrypt[cache_exclude]' => 1,
+      'field_encrypt[cache_exclude]' => $cache_exclude,
     ];
     $this->drupalPostForm(NULL, $edit, t('Save field settings'));
     $this->drupalGet('admin/structure/types/manage/page/fields/node.page.field_test_single/storage');
@@ -246,7 +246,7 @@ class FieldEncryptTestBase extends WebTestBase {
       'field_encrypt[encrypt]' => $encryption,
       'field_encrypt[properties][value]' => 'value',
       'field_encrypt[encryption_profile]' => $profile_id,
-      'field_encrypt[cache_exclude]' => 1,
+      'field_encrypt[cache_exclude]' => $cache_exclude,
     ];
     $this->drupalPostForm(NULL, $edit, t('Save field settings'));
   }
