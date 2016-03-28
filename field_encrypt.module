@@ -4,6 +4,7 @@
  * Contains module hooks for field_encrypt.
  */
 
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -131,6 +132,15 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'properties');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'cache_exclude');
+  }
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function field_encrypt_entity_view(array &$build, EntityInterface $entity, EntityViewDisplayInterface $display, $view_mode) {
+  if (field_encrypt_allow_encryption($entity)) {
+    \Drupal::service('field_encrypt.process_entities')->entitySetCacheTags($entity, $build);
   }
 }
 

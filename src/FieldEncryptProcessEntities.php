@@ -338,4 +338,23 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     }
   }
 
+  /**
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   */
+  public function entitySetCacheTags(ContentEntityInterface $entity, &$build) {
+    foreach ($entity->getFields() as $field) {
+      if ($this->checkField($field)) {
+        /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
+        $definition = $field->getFieldDefinition();
+        /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
+        $storage = $definition->get('fieldStorage');
+
+        // If cache_exclude is set, set caching max-age to 0.
+        if ($storage->getThirdPartySetting('field_encrypt', 'cache_exclude', TRUE) == TRUE) {
+          $build[$field->getName()]['#cache']['max-age'] = 0;
+        }
+      }
+    }
+  }
+
 }

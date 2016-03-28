@@ -56,4 +56,14 @@ interface FieldEncryptProcessEntitiesInterface {
    */
   public function updateStoredField($field_name, $field_entity_type, $original_encryption_settings, $entity_id);
 
+  /**
+   * Set the cache tags correctly for each encrypted field on an entity.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity whose fields to set cache tags on.
+   * @param $build
+   *   The entity render array.
+   */
+  public function entitySetCacheTags(ContentEntityInterface $entity, &$build);
+
 }
