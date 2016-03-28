@@ -67,10 +67,10 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     $this->assertText("two");
     $this->assertText("three");
 
-    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchField();
     $this->assertEqual("[ENCRYPTED]", $result);
 
-    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
@@ -90,17 +90,17 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     $this->assertEqual(5, count($encrypted_field_values));
 
     // Check if text is displayed unencrypted.
-    $this->drupalGet('node/' . $test_node->id());
+    $this->drupalGet('node/' . $this->testNode->id());
     $this->assertText("Lorem ipsum dolor sit amet.");
     $this->assertText("one");
     $this->assertText("two");
     $this->assertText("three");
 
     // Check values saved in the database.
-    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchField();
     $this->assertEqual("[ENCRYPTED]", $result);
 
-    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
@@ -120,16 +120,16 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     $this->assertEqual(0, count($encrypted_field_values));
 
     // Check if text is displayed unencrypted.
-    $this->drupalGet('node/' . $test_node->id());
+    $this->drupalGet('node/' . $this->testNode->id());
     $this->assertText("Lorem ipsum dolor sit amet.");
     $this->assertText("one");
     $this->assertText("two");
     $this->assertText("three");
 
-    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchField();
     $this->assertEqual("Lorem ipsum dolor sit amet.", $result);
 
-    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     $valid_values = ["one", "two", "three"];
     foreach ($result as $record) {
       $this->assertTrue(in_array($record->field_test_multi_value, $valid_values));
@@ -183,10 +183,10 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     $this->assertText("three");
 
     // Check values saved in the database.
-    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node_revision__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchField();
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node_revision__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchField();
     $this->assertEqual("[ENCRYPTED]", $result);
 
-    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node_revision__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node_revision__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
@@ -214,7 +214,7 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     // Reload node after saving.
     $controller = $this->entityManager->getStorage($this->testNode->getEntityTypeId());
     $controller->resetCache(array($this->testNode->id()));
-    $test_node = $controller->load($this->testNode->id());
+    $this->testNode = $controller->load($this->testNode->id());
 
     // Add translated values.
     $translated_values = [
@@ -232,8 +232,8 @@ class FieldEncryptTest extends FieldEncryptTestBase {
         ['value' => "trois"],
       ],
     ];
-    $test_node->addTranslation('fr', $translated_values);
-    $test_node->save();
+    $this->testNode->addTranslation('fr', $translated_values);
+    $this->testNode->save();
 
     // Check existence of EncryptedFieldValue entities.
     $encrypted_field_values = EncryptedFieldValue::loadMultiple();
@@ -247,19 +247,19 @@ class FieldEncryptTest extends FieldEncryptTestBase {
     $this->assertText("three");
 
     // Check if English text is displayed unencrypted.
-    $this->drupalGet('fr/node/' . $test_node->id());
+    $this->drupalGet('fr/node/' . $this->testNode->id());
     $this->assertText("Ceci est un text francais.");
     $this->assertText("un");
     $this->assertText("deux");
     $this->assertText("trois");
 
     // Check values saved in the database.
-    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_single_value FROM {node__field_test_single} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_single_value);
     }
 
-    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $test_node->id()))->fetchAll();
+    $result = \Drupal::database()->query("SELECT field_test_multi_value FROM {node__field_test_multi} WHERE entity_id = :entity_id", array(':entity_id' => $this->testNode->id()))->fetchAll();
     foreach ($result as $record) {
       $this->assertEqual("[ENCRYPTED]", $record->field_test_multi_value);
     }
