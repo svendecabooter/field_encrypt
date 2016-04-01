@@ -76,7 +76,7 @@ env:
     #- DRUPAL_TI_DEBUG_FILE_OUTPUT="selenium xvfb webserver"
 
   matrix:
-    - DRUPAL_TI_RUNNERS="phpunit-core"
+    - DRUPAL_TI_RUNNERS="phpunit-core simpletest"
 
 mysql:
   database: drupal_travis_db
@@ -85,6 +85,8 @@ mysql:
 
 before_install:
   - composer self-update
+  # Add the oauth token to prevent GitHub timeouts
+  - if [ -n "$GH_TOKEN" ]; then composer config github-oauth.github.com ${GH_TOKEN}; fi;
   - cd ./tests
 # Add support for Drupal 8.1 - see https://github.com/LionsAd/drupal_ti/pull/70
   - composer global require "lionsad/drupal_ti:dev-master#b2ce49cbeb59033e8b1170f80648e9114213f1a4"
@@ -95,8 +97,10 @@ install:
 
 before_script:
   # We run our script to add module dependencies
-  - drupal-ti --include drupal_ti/before/before_script.sh
   - drupal-ti before_script
+  - drupal-ti --include drupal_ti/before/before_script.sh
+  - drupal-ti --include drupal_ti/after/before_script.sh
+
 
 script:
   - drupal-ti script
