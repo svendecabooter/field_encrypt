@@ -86,7 +86,8 @@ mysql:
 before_install:
   - composer self-update
   - cd ./tests
-  - composer global require "lionsad/drupal_ti:1.*"
+# Add support for Drupal 8.1 - see https://github.com/LionsAd/drupal_ti/pull/70
+  - composer global require "lionsad/drupal_ti:dev-master#b2ce49cbeb59033e8b1170f80648e9114213f1a4"
   - drupal-ti before_install
 
 install:
