@@ -110,21 +110,9 @@ class EncryptedFieldValueManager implements EncryptedFieldValueManagerInterface 
   }
 
   /**
-   * Loads an existing EncryptedFieldValue entity.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The entity to check.
-   * @param string $field_name
-   *   The field name to check.
-   * @param int $delta
-   *   The field delta to check.
-   * @param string $property
-   *   The field property to check.
-   *
-   * @return bool|\Drupal\field_encrypt\Entity\EncryptedFieldValue
-   *   The existing EncryptedFieldValue entity.
+   * {@inheritdoc}
    */
-  protected function getExistingEntity(ContentEntityInterface $entity, $field_name, $delta, $property) {
+  public function getExistingEntity(ContentEntityInterface $entity, $field_name, $delta, $property) {
     $query = $this->entityQuery->get('encrypted_field_value')
       ->condition('entity_type', $entity->getEntityTypeId())
       ->condition('entity_id', $entity->id())

@@ -300,7 +300,7 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
 
     // Set up a mock for the EncryptionProfile class to mock some methods.
     $service = $this->getMockBuilder('\Drupal\field_encrypt\FieldEncryptProcessEntities')
-      ->setMethods(['checkField'])
+      ->setMethods(['checkField', 'allowEncryption'])
       ->setConstructorArgs(array(
         $this->queryFactory,
         $this->entityManager,
@@ -314,6 +314,9 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
     // scope of this specific unit test.
     $service->expects($this->once())
       ->method('checkField')
+      ->will($this->returnValue(TRUE));
+    $service->expects($this->any())
+      ->method('allowEncryption')
       ->will($this->returnValue(TRUE));
 
     $service->encryptEntity($this->entity);
@@ -381,7 +384,7 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
 
     // Set up a mock for the EncryptionProfile class to mock some methods.
     $service = $this->getMockBuilder('\Drupal\field_encrypt\FieldEncryptProcessEntities')
-      ->setMethods(['checkField', 'processField'])
+      ->setMethods(['checkField', 'processField', 'allowEncryption'])
       ->setConstructorArgs(array(
         $this->queryFactory,
         $this->entityManager,
@@ -399,6 +402,13 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
       $service->expects($this->never())
         ->method('processField');
     }
+
+    $service->expects($this->any())
+      ->method('checkField')
+      ->will($this->returnValue(TRUE));
+    $service->expects($this->any())
+      ->method('allowEncryption')
+      ->will($this->returnValue(TRUE));
 
     $service->updateStoredField($field_name, $field_entity_type, $original_encryption_settings, $entity_id);
   }

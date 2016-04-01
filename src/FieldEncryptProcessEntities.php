@@ -272,22 +272,30 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
     }
 
     if ($op === 'encrypt') {
-      // Encrypt property value.
-      $processed_value = base64_encode($this->encryptService->encrypt($value, $encryption_profile));
-      // Save encrypted value in EncryptedFieldValue entity.
-      $this->encryptedFieldValueManager->createEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
-      // Return value to store for unencrypted property.
-      // We can't set this to NULL, because then the field values are not saved,
-      // so we can't replace them with their unencrypted value on load.
-      $unencrypted_storage_value = '[ENCRYPTED]';
-      $context = [
-        "entity" => $entity,
-        "field" => $field,
-        "property" => $property_name,
-      ];
-      \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
-      return $unencrypted_storage_value;
-
+      if ($this->allowEncryption($entity, $field->getName(), $delta, $property_name)) {
+        // Encrypt property value.
+        $processed_value = base64_encode($this->encryptService->encrypt($value, $encryption_profile));
+        // Save encrypted value in EncryptedFieldValue entity.
+        $this->encryptedFieldValueManager->createEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
+        // Return value to store for unencrypted property.
+        // We can't set this to NULL, because then the field values are not saved,
+        // so we can't replace them with their unencrypted value on load.
+        $unencrypted_storage_value = '[ENCRYPTED]';
+        $context = [
+          "entity" => $entity,
+          "field" => $field,
+          "property" => $property_name,
+        ];
+        \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
+        return $unencrypted_storage_value;
+      }
+      else {
+        // If not allowed, but we still have an EncryptedFieldValue entity, remove it.
+        if ($encrypted_value = $this->encryptedFieldValueManager->getExistingEntity($entity, $field->getName(), $delta, $property_name)) {
+          $this->entityManager->getStorage('encrypted_field_value')->delete([$encrypted_value]);
+        }
+        return $value;
+      }
     }
     elseif ($op === 'decrypt') {
       // Get encrypted value from EncryptedFieldValue entity.
@@ -300,6 +308,30 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         return $value;
       }
     }
+  }
+
+  /**
+   * Defines if a given field + property on an entity should be encrypted.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to encrypt fields on.
+   * @param string $field_name
+   *   The field name to update.
+   * @param string $delta
+   *   The field delta.
+   * @param string $property_name
+   *   The field property name.
+
+   * @return bool
+   *   Whether to encrypt this field or not.
+   */
+  protected function allowEncryption(ContentEntityInterface $entity, $field_name, $delta, $property_name) {
+    foreach (\Drupal::moduleHandler()->getImplementations('field_encrypt_allow_encryption') as $module) {
+      if (\Drupal::moduleHandler()->invoke($module, 'field_encrypt_allow_encryption', [$entity, $field_name, $delta, $property_name]) === FALSE) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**
