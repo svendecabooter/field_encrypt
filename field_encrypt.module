@@ -57,12 +57,13 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
         $properties[$property] = $definition->getLabel();
       }
 
+      $field_encrypt_default = isset($default_properties[$field_type]) ? $default_properties[$field_type] : [];
       $form['field_encrypt']['field_encrypt']['properties'] = [
         '#type' => 'checkboxes',
         '#title' => t('Properties'),
         '#description' => t('Specify the field properties to encrypt.'),
         '#options' => $properties,
-        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $default_properties[$field_type]),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'properties', $field_encrypt_default),
         '#states' => [
           'visible' => [
             ':input[name="field_encrypt[encrypt]"]' => array('checked' => TRUE),
