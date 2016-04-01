@@ -25,3 +25,4 @@ composer drupal-rebuild
 # https://github.com/composer/composer/issues/1314
 #composer drupal-update --no-interaction --prefer-source
 composer update -n --lock --verbose
+drush en field_encrypt -y
