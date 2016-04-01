@@ -73,8 +73,8 @@ fields before storage.
 
 The `encryptEntity()` and `decryptEntity()` methods perform these actions. 
 Additionally, after we have changed the storage settings (enabled / disabled
- encryption), we must process existing fields. `encryptStoredField()` and 
- `decryptStoredField()` provide that functionality.
+encryption), we must process existing fields. `updateStoredField()` provides 
+that functionality.
 
 Inside the service, we iterate over each field and then each of the fields 
 values. For example, the `text_with_summary` field type has a `value` and a 
@@ -83,9 +83,9 @@ of the Encrypt module.
 
 ### Encrypt Field Storage Third Party Setting
 In Drupal 8, the field storage settings (field base in Drupal 7) are stored in
- configuration management using a Configuration Entity. 
- Extending configuration entities is done by providing `Third Party Settings` 
- and using the associated methods.
+configuration management using a Configuration Entity. 
+Extending configuration entities is done by providing `Third Party Settings` 
+and using the associated methods.
 
 We provide this setting to all fields using the 
 `config/schema/field_encrypt.schema.yml` file.
@@ -96,9 +96,11 @@ we can set / change this value. We hook into the form system with
 `hook_form_alter()` in our `.module` file.
 
 ### Updating Stored Field Values
-In addition to adding this new value to the form, we add a function to handle 
-the form submission which will respond to changes in the setting value.
-This way, when the setting is changed, we can process stored values and 
-encrypt / decrypt to match the new setting. This encryption / decryption is 
-handled by the `FieldEncryptProcessEntities` service with the 
-`encryptStoredField()` and `decryptStoredField()` methods.
+The field_encrypt module provdes an EventSubscriber that reacts to configuration
+changes (\Drupal\field_encrypt\EventSubscriber\ConfigSubscriber). When the field
+storage config changes, we check if there was a change in the field_encrypt
+settings.
+This way, when the setting is changed, we can queue stored values to encrypt / 
+decrypt to match the new setting. We use Drupal 8's Queue API to queue this 
+process. The actual encryption / decryption is handled by the 
+`FieldEncryptProcessEntities` service with the `updateStoredField()` method.
