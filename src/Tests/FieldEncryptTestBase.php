@@ -53,7 +53,7 @@ abstract class FieldEncryptTestBase extends WebTestBase {
    *
    * @var \Drupal\key\Entity\Key[]
    */
-  protected $keys;
+  protected $testKeys;
 
   /**
    * A list of test encryption profiles.
@@ -85,6 +85,8 @@ abstract class FieldEncryptTestBase extends WebTestBase {
 
   /**
    * {@inheritdoc}
+   *
+   * @TODO: Simplify setUp() by extending EncryptTestBase when https://www.drupal.org/node/2692387 lands.
    */
   protected function setUp() {
     parent::setUp();
@@ -102,33 +104,33 @@ abstract class FieldEncryptTestBase extends WebTestBase {
 
     // Create test keys for encryption.
     $key_128 = Key::create([
-      'id' => 'key_128',
+      'id' => 'testing_key_128',
       'label' => 'Test Key 128 bit',
       'key_type' => "encryption",
-      'key_type_settings[key_size]' => '128',
+      'key_type_settings' => ['key_size' => '128'],
       'key_provider' => 'config',
-      'key_input_settings[key_value]' => 'mustbesixteenbit',
+      'key_provider_settings' => ['key_value' => 'mustbesixteenbit'],
     ]);
     $key_128->save();
-    $this->keys['key_128'] = $key_128;
+    $this->testKeys['testing_key_128'] = $key_128;
 
     $key_256 = Key::create([
-      'id' => 'key_256',
+      'id' => 'testing_key_256',
       'label' => 'Test Key 256 bit',
       'key_type' => "encryption",
-      'key_type_settings[key_size]' => '256',
+      'key_type_settings' => ['key_size' => '256'],
       'key_provider' => 'config',
-      'key_input_settings[key_value]' => 'mustbesixteenbitmustbesixteenbit',
+      'key_provider_settings' => ['key_value' => 'mustbesixteenbitmustbesixteenbit'],
     ]);
     $key_256->save();
-    $this->keys['key_256'] = $key_256;
+    $this->testKeys['testing_key_256'] = $key_256;
 
     // Create test encryption profiles.
     $encryption_profile_1 = EncryptionProfile::create([
       'id' => 'encryption_profile_1',
       'label' => 'Encryption profile 1',
       'encryption_method' => 'test_encryption_method',
-      'encryption_key' => $this->keys['key_128']->id(),
+      'encryption_key' => $this->testKeys['testing_key_128']->id(),
     ]);
     $encryption_profile_1->save();
     $this->encryptionProfiles['encryption_profile_1'] = $encryption_profile_1;
@@ -137,8 +139,8 @@ abstract class FieldEncryptTestBase extends WebTestBase {
       'id' => 'encryption_profile_2',
       'label' => 'Encryption profile 2',
       'encryption_method' => 'config_test_encryption_method',
-      'encryption_method_configuration[mode]' => 'CFB',
-      'encryption_key' => $this->keys['key_256']->id(),
+      'encryption_method_configuration' => ['mode' => 'CFB'],
+      'encryption_key' => $this->testKeys['testing_key_256']->id(),
     ]);
     $encryption_profile_2->save();
     $this->encryptionProfiles['encryption_profile_2'] = $encryption_profile_2;
