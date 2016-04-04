@@ -20,7 +20,7 @@ use Drupal\simpletest\WebTestBase;
  *
  * @group field_encrypt
  */
-class FieldEncryptTestBase extends WebTestBase {
+abstract class FieldEncryptTestBase extends WebTestBase {
 
   /**
    * Modules to enable for this test.
