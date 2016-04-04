@@ -129,7 +129,7 @@ class FieldEncryptUpdateForm extends FormBase {
           $queue_worker->processItem($item->data);
           $queue->deleteItem($item);
 
-          $context['results'][] = $item->data['entity_id'];
+          $context['results']['items'][] = $item->data['entity_id'];
           $message = t('Updating @field_name on @entity_type with ID @entity_id', array(
             '@field_name' => $item->data['field_name'],
             '@entity_type' => $item->data['entity_type'],
@@ -143,6 +143,10 @@ class FieldEncryptUpdateForm extends FormBase {
         }
         catch (\Exception $e) {
           watchdog_exception('field_encrypt', $e);
+          if (!isset($context['results']['errors'])) {
+            $context['results']['errors'] = array();
+          }
+          $context['results']['errors'][] = $e->getMessage();
         }
       }
     }
@@ -168,13 +172,16 @@ class FieldEncryptUpdateForm extends FormBase {
     // The 'success' parameter means no fatal PHP errors were detected. All
     // other error management should be handled using 'results'.
     if ($success) {
-      $message = \Drupal::translation()->formatPlural(count($results), 'One field updated.', '@count fields updated.');
+      $message = \Drupal::translation()->formatPlural(count($results['items']), 'One field updated.', '@count fields updated.');
+      drupal_set_message($message);
     }
     else {
-      // @TODO: provide better error handling.
-      $message = \Drupal::translation()->t('Finished with an error.');
+      if (!empty($results['errors'])) {
+        foreach ($results['errors'] as $error) {
+          drupal_set_message($error, 'error');
+        }
+      }
     }
-    drupal_set_message($message);
   }
 
 }
