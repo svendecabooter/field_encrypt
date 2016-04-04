@@ -278,19 +278,13 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         // Save encrypted value in EncryptedFieldValue entity.
         $this->encryptedFieldValueManager->createEncryptedFieldValue($entity, $field->getName(), $delta, $property_name, $processed_value);
         // Return value to store for unencrypted property.
-        // We can't set this to NULL, because then the field values are not saved,
-        // so we can't replace them with their unencrypted value on load.
-        $unencrypted_storage_value = '[ENCRYPTED]';
-        $context = [
-          "entity" => $entity,
-          "field" => $field,
-          "property" => $property_name,
-        ];
-        \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
-        return $unencrypted_storage_value;
+        // We can't set this to NULL, because then the field values are not
+        // saved, so we can't replace them with their unencrypted value on load.
+        return $this->getUnencryptedPlaceholderValue($entity, $field, $property_name);
       }
       else {
-        // If not allowed, but we still have an EncryptedFieldValue entity, remove it.
+        // If not allowed, but we still have an EncryptedFieldValue entity,
+        // remove it.
         if ($encrypted_value = $this->encryptedFieldValueManager->getExistingEntity($entity, $field->getName(), $delta, $property_name)) {
           $this->entityManager->getStorage('encrypted_field_value')->delete([$encrypted_value]);
         }
@@ -321,7 +315,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    *   The field delta.
    * @param string $property_name
    *   The field property name.
-
+   *
    * @return bool
    *   Whether to encrypt this field or not.
    */
@@ -332,6 +326,58 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
       }
     }
     return TRUE;
+  }
+
+  /**
+   * Render a placeholder value to be stored in the unencrypted field storage.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to encrypt fields on.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The field to encrypt.
+   * @param string $property_name
+   *   The property to encrypt.
+   *
+   * @return mixed
+   *   The unencrypted placeholder value.
+   */
+  protected function getUnencryptedPlaceholderValue(ContentEntityInterface $entity, FieldItemListInterface $field, $property_name) {
+    $unencrypted_storage_value = NULL;
+
+    $property_definitions = $field->getFieldDefinition()->get('fieldStorage')->getPropertyDefinitions();
+    $data_type = $property_definitions[$property_name]->getDataType();
+
+    switch ($data_type) {
+      case "string":
+      case "email":
+      case "datetime_iso8601":
+      case "duration_iso8601":
+      case "uri":
+      case "filter_format":
+        // Decimal fields are string data type, but get stored as number.
+        if ($field->getFieldDefinition()->getType() == "decimal") {
+          $unencrypted_storage_value = 0;
+        }
+        else {
+          $unencrypted_storage_value = '[ENCRYPTED]';
+        }
+        break;
+
+      case "integer":
+      case "boolean":
+      case "float":
+        $unencrypted_storage_value = 0;
+        break;
+    }
+
+    $context = [
+      "entity" => $entity,
+      "field" => $field,
+      "property" => $property_name,
+    ];
+    \Drupal::modulehandler()->alter('field_encrypt_unencrypted_storage_value', $unencrypted_storage_value, $context);
+
+    return $unencrypted_storage_value;
   }
 
   /**
