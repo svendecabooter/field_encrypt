@@ -9,6 +9,7 @@ namespace Drupal\field_encrypt\Tests;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\dynamic_page_cache\EventSubscriber\DynamicPageCacheSubscriber;
+use Drupal\field\Entity\FieldStorageConfig;
 
 /**
  * Tests field encryption caching.
@@ -38,7 +39,7 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
   }
 
   /**
-   * Test dynamic page cache.
+   * Test caching of encrypted fields on response level.
    */
   public function testDynamicPageCache() {
     // Page should be uncacheable due to max-age = 0.
@@ -58,19 +59,64 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
   }
 
   /**
-   * Test caching of rendered entity.
+   * Test caching of encrypted fields on entity level.
    */
-  public function testEntityRender() {
-    // Check for max-age = 0 on entity with encrypted field.
-    $build = $this->drupalBuildEntityView($this->testNode);
-    // @TODO: this probably doesn't work because hook_entity_view isn't called.
-    // Find out if there's a better way then hook_entity_view to set cache tags.
-    $this->assertEqual(0, $build['#cache']['max-age'], 'Cache max-age is set correctly.');
+  public function testEntityCache() {
+    // Check if entity with cache excluded fields is cached by the entity
+    // storage.
+    $entity_type = $this->testNode->getEntityTypeId();
+    $cid = "values:$entity_type:" . $this->testNode->id();
+
+    // Check that no initial cache entry is present.
+    $this->assertFalse(\Drupal::cache('entity')->get($cid), 'Entity cache: no initial cache.');
+
+    $controller = $this->entityManager->getStorage($entity_type);
+    $controller->resetCache();
+    $controller->load($this->testNode->id());
+
+    // Check if entity gets cached.
+    $this->assertFalse(\Drupal::cache('entity')->get($cid), 'Entity cache: entity is not in persistent cache.');
 
     // Set encrypted field as cacheable.
     $this->setFieldStorageSettings(TRUE, FALSE, FALSE);
-    $build = $this->drupalBuildEntityView($this->testNode);
-    $this->assertEqual(Cache::PERMANENT, $build['#cache']['max-age'], 'Cache max-age is set correctly.');
+    $controller->resetCache();
+    $controller->load($this->testNode->id());
+
+    $cache = \Drupal::cache('entity')->get($cid);
+    $this->assertTrue(is_object($cache), 'Entity cache: entity is in persistent cache.');
+  }
+
+  /**
+   * Set up storage settings for test fields.
+   */
+  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE, $cache_exclude = TRUE) {
+    $fields = [
+      'node.field_test_single' => [
+        'properties' => ['value' => 'value', 'summary' => 'summary'],
+        'profile' => ($alternate == TRUE) ? 'encryption_profile_2' : 'encryption_profile_1',
+      ],
+      'node.field_test_multi' => [
+        'properties' => ['value' => 'value'],
+        'profile' => ($alternate == TRUE) ? 'encryption_profile_1' : 'encryption_profile_2',
+      ],
+    ];
+
+    foreach ($fields as $field => $settings) {
+      $field_storage = FieldStorageConfig::load($field);
+      if ($encryption) {
+        $field_storage->setThirdPartySetting('field_encrypt', 'encrypt', TRUE);
+        $field_storage->setThirdPartySetting('field_encrypt', 'properties', $settings['properties']);
+        $field_storage->setThirdPartySetting('field_encrypt', 'encryption_profile', $settings['profile']);
+        $field_storage->setThirdPartySetting('field_encrypt', 'cache_exclude', $cache_exclude);
+      }
+      else {
+        $field_storage->unsetThirdPartySetting('field_encrypt', 'encrypt');
+        $field_storage->unsetThirdPartySetting('field_encrypt', 'properties');
+        $field_storage->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
+        $field_storage->unsetThirdPartySetting('field_encrypt', 'cache_exclude');
+      }
+      $field_storage->save();
+    }
   }
 
 }

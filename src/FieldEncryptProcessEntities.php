@@ -342,6 +342,37 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    * {@inheritdoc}
    */
   public function entitySetCacheTags(ContentEntityInterface $entity, &$build) {
+    $cache_exclude_fields = $this->getCacheExcludeFields($entity);
+    foreach ($cache_exclude_fields as $field_name) {
+      $build[$field_name]['#cache']['max-age'] = 0;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entityCheckPersistentCache(ContentEntityInterface $entity) {
+    $cache_exclude_fields = $this->getCacheExcludeFields($entity);
+    if (!empty($cache_exclude_fields)) {
+      // Some fields don't want to be cached, so clear the persistent entity
+      // cache, to avoid their values to be cached unencrypted.
+      /** @var \Drupal\Core\Entity\ContentEntityStorageInterface $storage */
+      $storage = $this->entityManager->getStorage($entity->getEntityTypeId());
+      $storage->resetCache([$entity->id()]);
+    }
+  }
+
+  /**
+   * Get field names for an entity that are set to be excluded from cache.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to check.
+   *
+   * @return array
+   *   List of field names that are excluded from cache.
+   */
+  protected function getCacheExcludeFields(ContentEntityInterface $entity) {
+    $cache_exclude_fields = [];
     foreach ($entity->getFields() as $field) {
       if ($this->checkField($field)) {
         /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
@@ -351,10 +382,11 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
 
         // If cache_exclude is set, set caching max-age to 0.
         if ($storage->getThirdPartySetting('field_encrypt', 'cache_exclude', TRUE) == TRUE) {
-          $build[$field->getName()]['#cache']['max-age'] = 0;
+          $cache_exclude_fields[] = $field->getName();
         }
       }
     }
+    return $cache_exclude_fields;
   }
 
 }

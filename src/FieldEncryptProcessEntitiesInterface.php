@@ -66,4 +66,12 @@ interface FieldEncryptProcessEntitiesInterface {
    */
   public function entitySetCacheTags(ContentEntityInterface $entity, &$build);
 
+  /**
+   * Check if persistent entity cache needs to be reset.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity to check.
+   */
+  public function entityCheckPersistentCache(ContentEntityInterface $entity);
+
 }

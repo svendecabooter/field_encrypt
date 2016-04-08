@@ -208,6 +208,20 @@ function field_encrypt_entity_delete(EntityInterface $entity) {
 }
 
 /**
+ * Implements hook_entity_load().
+ */
+function field_encrypt_entity_load(array $entities, $entity_type_id) {
+  /* @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities */
+  $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
+
+  foreach ($entities as $entity) {
+    if (field_encrypt_allow_encryption($entity)) {
+      $field_encrypt_process_entities->entityCheckPersistentCache($entity);
+    }
+  }
+}
+
+/**
  * Verify if the given entity allows to be encrypted.
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
