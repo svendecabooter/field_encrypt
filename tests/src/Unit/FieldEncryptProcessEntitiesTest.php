@@ -9,6 +9,8 @@ namespace Drupal\Tests\field_encrypt\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\field_encrypt\FieldEncryptProcessEntities;
 use Drupal\Tests\UnitTestCase;
 
@@ -236,19 +238,20 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
    * @covers ::processEntity
    * @covers ::processField
    * @covers ::processValue
+   * @covers ::getUnencryptedPlaceholderValue
    *
    * @dataProvider encyptDecryptEntityDataProvider
    */
-  public function testEncyptDecryptEntity($encrypted) {
+  public function testEncyptDecryptEntity($field_type, $property_definitions, $properties, $field_value, $expected_placeholder, $encrypted) {
     // Set up field definition.
     $definition = $this->getMockBuilder('\Drupal\Core\Field\BaseFieldDefinition')
-      ->setMethods(['get'])
+      ->setMethods(['get', 'getType'])
       ->disableOriginalConstructor()
       ->getMock();
 
     // Set up field storage.
     $storage = $this->getMockBuilder('\Drupal\Core\Field\FieldConfigStorageBase')
-      ->setMethods(['getThirdPartySetting'])
+      ->setMethods(['getThirdPartySetting', 'getPropertyDefinitions'])
       ->disableOriginalConstructor()
       ->getMock();
 
@@ -256,11 +259,15 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
     $storage_map = [
       ['field_encrypt', 'encrypt', FALSE, $encrypted],
       ['field_encrypt', 'encryption_profile', [], 'test_encryption_profile'],
-      ['field_encrypt', 'properties', [], ['value' => 'value']],
+      ['field_encrypt', 'properties', [], $properties],
     ];
     $storage->expects($this->any())
       ->method('getThirdPartySetting')
       ->will($this->returnValueMap($storage_map));
+
+    $storage->expects($this->any())
+      ->method('getPropertyDefinitions')
+      ->will($this->returnValue($property_definitions));
 
     // Set up expectations for definition.
     $definition->expects($this->any())
@@ -270,13 +277,14 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
         ['fieldStorage', $storage],
       ]);
 
+    $definition->expects($this->any())
+      ->method('getType')
+      ->will($this->returnValue($field_type));
+
     // Set up expectations for field.
-    $this->field->expects($this->once())
+    $this->field->expects($this->any())
       ->method('getFieldDefinition')
       ->will($this->returnValue($definition));
-    $field_value = [
-      ['value' => 'unencrypted text'],
-    ];
 
     if ($encrypted) {
       $this->field->expects($this->once())
@@ -284,7 +292,7 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
         ->will($this->returnValue($field_value));
       $this->field->expects($this->once())
         ->method('setValue')
-        ->with([['value' => '[ENCRYPTED]']]);
+        ->with($expected_placeholder);
     }
     else {
       $this->field->expects($this->never())
@@ -330,8 +338,138 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
    */
   public function encyptDecryptEntityDataProvider() {
     return [
-      'encrypted' => [TRUE],
-      'not_encrypted' => [FALSE],
+      'encrypted_text' => [
+        'text',
+        [
+          'value' => new DataDefinition(['type' => 'string', 'required' => TRUE]),
+          'format' => new DataDefinition(['type' => 'filter_format']),
+          'processed' => new DataDefinition([
+            'type' => 'string',
+            'computed' => TRUE,
+            'class' => '\Drupal\text\TextProcessed',
+            'settings' => ['text source' => 'value'],
+          ]),
+        ],
+        ['value' => 'value', 'format' => 'format'],
+        [['value' => 'unencrypted text']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_email' => [
+        'email',
+        [
+          'value' => new DataDefinition(['type' => 'email', 'required' => TRUE]),
+        ],
+        ['value' => 'value'],
+        [['value' => 'test@example.com']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_date' => [
+        'datetime',
+        [
+          'value' => new DataDefinition([
+            'type' => 'datetime_iso8601', 'required' => TRUE
+          ]),
+          'date' => new DataDefinition([
+            'type' => 'any',
+            'computed' => TRUE,
+            'class' => '\Drupal\datetime\DateTimeComputed',
+            'settings' => ['date source' => 'value'],
+          ])
+        ],
+        ['value' => 'value'],
+        [['value' => '1984-10-04T00:00:00']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_link' => [
+        'link',
+        [
+          'uri' => new DataDefinition(['type' => 'uri']),
+          'title' => new DataDefinition(['type' => 'string']),
+          'options' => new DataDefinition(['type' => 'map']),
+        ],
+        ['uri' => 'uri', 'title' => 'title'],
+        [[
+          'title' => 'Drupal.org',
+          'attributes' => [],
+          'options' => [],
+          'uri' => 'https://drupal.org',
+        ]],
+        [[
+          'title' => '[ENCRYPTED]',
+          'uri' => '[ENCRYPTED]',
+          'options' => [],
+          'attributes' => []
+        ]],
+        TRUE,
+      ],
+      'encrypted_int' => [
+        'integer',
+        ['value' => new DataDefinition([
+          'type' => 'integer',
+          'required' => TRUE]
+        )],
+        ['value' => 'value'],
+        [['value' => '42']],
+        [['value' => 0]],
+        TRUE,
+      ],
+      'encrypted_float' => [
+        'float',
+        ['value' => new DataDefinition([
+            'type' => 'float',
+            'required' => TRUE]
+        )],
+        ['value' => 'value'],
+        [['value' => '3.14']],
+        [['value' => 0]],
+        TRUE,
+      ],
+      'encrypted_boolean' => [
+        'boolean',
+        ['value' => new DataDefinition([
+            'type' => 'boolean',
+            'required' => TRUE]
+        )],
+        ['value' => 'value'],
+        [['value' => 1]],
+        [['value' => 0]],
+        TRUE,
+      ],
+      'encrypted_telephone' => [
+        'telephone',
+        ['value' => new DataDefinition([
+            'type' => 'string',
+            'required' => TRUE]
+        )],
+        ['value' => 'value'],
+        [['value' => '+1-202-555-0161']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_entity_reference' => [
+        'entity_reference',
+        [
+          'target_id' => new DataDefinition([
+            'type' => 'integer',
+            'settings' => ['unsigned' => TRUE],
+            'required' => TRUE
+          ]),
+          'entity' => new DataDefinition([
+            'type' => 'entity_reference',
+            'computed' => TRUE,
+            'read-only' => FALSE,
+            'constraints' => ['EntityType' => 'user'],
+          ]),
+        ],
+        ['target_id' => 'target_id'],
+        [['target_id' => 1]],
+        [['target_id' => 0]],
+        TRUE,
+      ],
+      'not_encrypted' => ['text', [], [], 'unencrypted text', NULL, FALSE],
     ];
   }
 
