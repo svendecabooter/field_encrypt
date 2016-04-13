@@ -349,20 +349,6 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
   }
 
   /**
-   * {@inheritdoc}
-   */
-  public function entityCheckPersistentCache(ContentEntityInterface $entity) {
-    $uncacheable_fields = $this->getUncacheableFields($entity);
-    if (!empty($uncacheable_fields)) {
-      // Some fields don't want to be cached, so clear the persistent entity
-      // cache, to avoid their values to be cached unencrypted.
-      /** @var \Drupal\Core\Entity\ContentEntityStorageInterface $storage */
-      $storage = $this->entityManager->getStorage($entity->getEntityTypeId());
-      $storage->resetCache([$entity->id()]);
-    }
-  }
-
-  /**
    * Get field names for an entity that are set to be excluded from cache.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
@@ -381,7 +367,7 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         $storage = $definition->get('fieldStorage');
 
         // If uncacheable is set, set caching max-age to 0.
-        if ($storage->getThirdPartySetting('field_encrypt', 'uncacheable', TRUE) == TRUE) {
+        if ($storage->getThirdPartySetting('field_encrypt', 'uncacheable', FALSE) == TRUE) {
           $uncacheable_fields[] = $field->getName();
         }
       }

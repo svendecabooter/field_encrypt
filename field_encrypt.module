@@ -4,9 +4,12 @@
  * Contains module hooks for field_encrypt.
  */
 
+use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\DynamicallyFieldableEntityStorageInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\field\Entity\FieldStorageConfig;
 
 /**
  * Implements hook_form_alter().
@@ -88,8 +91,8 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
       // Add setting to decide if field should be excluded from cache.
       $form['field_encrypt']['field_encrypt']['uncacheable'] = [
         '#type' => 'checkbox',
-        '#title' => t('Exclude from cache'),
-        '#description' => t('Exclude this field from being cached. This will make sure your unencrypted data will not be exposed in the cache, but could have impact on your performance.'),
+        '#title' => t('Uncacheable'),
+        '#description' => t('Mark this field as uncacheable. This will make sure your unencrypted data will not be exposed in the cache, but will have a negative impact on your performance.'),
         '#default_value' => $field->getThirdPartySetting('field_encrypt', 'uncacheable', TRUE),
         '#states' => [
           'visible' => [
@@ -208,20 +211,6 @@ function field_encrypt_entity_delete(EntityInterface $entity) {
 }
 
 /**
- * Implements hook_entity_load().
- */
-function field_encrypt_entity_load(array $entities, $entity_type_id) {
-  /* @var $field_encrypt_process_entities \Drupal\field_encrypt\FieldEncryptProcessEntities */
-  $field_encrypt_process_entities = \Drupal::service('field_encrypt.process_entities');
-
-  foreach ($entities as $entity) {
-    if (field_encrypt_allow_encryption($entity)) {
-      $field_encrypt_process_entities->entityCheckPersistentCache($entity);
-    }
-  }
-}
-
-/**
  * Verify if the given entity allows to be encrypted.
  *
  * @param \Drupal\Core\Entity\EntityInterface $entity
@@ -243,4 +232,59 @@ function field_encrypt_allow_encryption(EntityInterface $entity) {
     $allowed = FALSE;
   }
   return $allowed;
+}
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function field_encrypt_entity_type_alter(array &$entity_types) {
+  $uncacheable_types = field_encrypt_get_uncacheable_entity_types($entity_types);
+  foreach ($uncacheable_types as $uncacheable_type) {
+    $entity_types[$uncacheable_type]->set('static_cache', FALSE);
+    $entity_types[$uncacheable_type]->set('render_cache', FALSE);
+    $entity_types[$uncacheable_type]->set('persistent_cache', FALSE);
+  }
+}
+
+/**
+ * Get a list of uncacheable entity types.
+ *
+ * @param \Drupal\Core\Entity\EntityTypeInterface[] $entity_types
+ *   A list of entity types.
+ * @return array
+ *   List of entity type IDs that are uncacheable.
+ */
+function field_encrypt_get_uncacheable_entity_types($entity_types) {
+  $types = &drupal_static(__FUNCTION__);
+
+  if (is_null($types)) {
+    $types = [];
+    /** @var $entity_types \Drupal\Core\Entity\EntityTypeInterface[] */
+    foreach ($entity_types as $entity_type) {
+      if ($entity_type instanceof ContentEntityTypeInterface) {
+        $storage_class = \Drupal::entityManager()->createHandlerInstance($entity_type->getStorageClass(), $entity_type);
+        if ($storage_class instanceof DynamicallyFieldableEntityStorageInterface) {
+          // Query by filtering on the ID as this is more efficient than filtering
+          // on the entity_type property directly.
+          $ids = \Drupal::entityQuery('field_storage_config')
+            ->condition('id', $entity_type->id() . '.', 'STARTS_WITH')
+            ->execute();
+          // Fetch all fields on entity type.
+          $field_storages = FieldStorageConfig::loadMultiple($ids);
+          if ($field_storages) {
+            foreach ($field_storages as $storage) {
+              // Check if field is encrypted.
+              if ($storage->getThirdPartySetting('field_encrypt', 'uncacheable', FALSE) == TRUE) {
+                // If there is an encrypted field, mark this entity type as
+                // uncacheable.
+                $type = $storage->getTargetEntityTypeId();
+                $types[$type] = $type;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return $types;
 }

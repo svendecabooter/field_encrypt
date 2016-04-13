@@ -7,6 +7,8 @@
 
 namespace Drupal\field_encrypt\EventSubscriber;
 
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigCrudEvent;
 use Drupal\Core\Config\ConfigEvents;
@@ -55,6 +57,20 @@ class ConfigSubscriber implements EventSubscriberInterface {
   protected $encryptedFieldValueManager;
 
   /**
+   * Cache backend instance.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  protected $cacheBackend;
+
+  /**
+   * The cache tags invalidator.
+   *
+   * @var \Drupal\Core\Cache\CacheTagsInvalidatorInterface
+   */
+  protected $cacheTagsInvalidator;
+
+  /**
    * Constructs a new ConfigSubscriber object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_manager
@@ -67,13 +83,16 @@ class ConfigSubscriber implements EventSubscriberInterface {
    *   The string translation service.
    * @param \Drupal\field_encrypt\EncryptedFieldValueManagerInterface $encrypted_field_value_manager
    *   The EncryptedFieldValue entity manager.
+   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cache_tags_invalidator
+   *   The cache tags invalidator.
    */
-  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation, EncryptedFieldValueManagerInterface $encrypted_field_value_manager) {
+  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation, EncryptedFieldValueManagerInterface $encrypted_field_value_manager, CacheTagsInvalidatorInterface $cache_tags_invalidator) {
     $this->entityManager = $entity_manager;
     $this->entityQuery = $entity_query;
     $this->queueFactory = $queue_factory;
     $this->stringTranslation = $translation;
     $this->encryptedFieldValueManager = $encrypted_field_value_manager;
+    $this->cacheTagsInvalidator = $cache_tags_invalidator;
   }
 
   /**
@@ -93,51 +112,59 @@ class ConfigSubscriber implements EventSubscriberInterface {
    */
   public function onConfigSave(ConfigCrudEvent $event) {
     $config = $event->getConfig();
-    if (substr($config->getName(), 0, 14) == 'field.storage.' && $this->configChanged($config)) {
+    if (substr($config->getName(), 0, 14) == 'field.storage.') {
       // Get the original field_encrypt configuration.
       $original_config = $config->getOriginal('third_party_settings.field_encrypt');
 
-      // Get the entity type and field from the changed config key.
-      $storage_name = substr($config->getName(), 14);
-      list($entity_type, $field_name) = explode('.', $storage_name, 2);
+      // Clear entity_type discovery cache, if "uncacheable" setting changed.
+      //if ($new_config['uncacheable'] !== $original_config['uncacheable']) {
+        $this->cacheTagsInvalidator->invalidateTags(['entity_types', 'entity_field_info']);
+      //}
 
-      // Load the FieldStorageConfig entity that was updated.
-      $field_storage_config = FieldStorageConfig::loadByName($entity_type, $field_name);
-      if ($field_storage_config) {
-        if ($field_storage_config->hasData()) {
-          // Get entities that need updating, because they contain the field
-          // that has its field encryption settings updated.
-          $query = $this->entityQuery->get($entity_type);
-          // Check if the field is present.
-          $query->exists($field_name);
-          // Make sure to get all revisions for revisionable entities.
-          if ($this->entityManager->getDefinition($entity_type)
-            ->hasKey('revision')
-          ) {
-            $query->allRevisions();
-          }
-          $entity_ids = $query->execute();
+      // Update existing entities, if data encryption settings changed.
+      if ($this->encryptionConfigChanged($config)) {
+        // Get the entity type and field from the changed config key.
+        $storage_name = substr($config->getName(), 14);
+        list($entity_type, $field_name) = explode('.', $storage_name, 2);
 
-          if (!empty($entity_ids)) {
-            // Call the Queue API and add items for processing.
-            /** @var QueueInterface $queue */
-            $queue = $this->queueFactory->get('cron_encrypted_field_update');
-
-            foreach (array_keys($entity_ids) as $entity_id) {
-              $data = [
-                "entity_id" => $entity_id,
-                "field_name" => $field_name,
-                "entity_type" => $entity_type,
-                "original_config" => $original_config,
-              ];
-              $queue->createItem($data);
+        // Load the FieldStorageConfig entity that was updated.
+        $field_storage_config = FieldStorageConfig::loadByName($entity_type, $field_name);
+        if ($field_storage_config) {
+          if ($field_storage_config->hasData()) {
+            // Get entities that need updating, because they contain the field
+            // that has its field encryption settings updated.
+            $query = $this->entityQuery->get($entity_type);
+            // Check if the field is present.
+            $query->exists($field_name);
+            // Make sure to get all revisions for revisionable entities.
+            if ($this->entityManager->getDefinition($entity_type)
+              ->hasKey('revision')
+            ) {
+              $query->allRevisions();
             }
-          }
+            $entity_ids = $query->execute();
 
-          drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed. You should immediately <a href=":url">run this process manually</a>. Alternatively, the updates will be performed automatically by cron.', array(
-            ':url' => Url::fromRoute('field_encrypt.field_update')
-              ->toString()
-          )));
+            if (!empty($entity_ids)) {
+              // Call the Queue API and add items for processing.
+              /** @var QueueInterface $queue */
+              $queue = $this->queueFactory->get('cron_encrypted_field_update');
+
+              foreach (array_keys($entity_ids) as $entity_id) {
+                $data = [
+                  "entity_id" => $entity_id,
+                  "field_name" => $field_name,
+                  "entity_type" => $entity_type,
+                  "original_config" => $original_config,
+                ];
+                $queue->createItem($data);
+              }
+            }
+
+            drupal_set_message($this->t('Updates to entities with existing data for this field have been queued to be processed. You should immediately <a href=":url">run this process manually</a>. Alternatively, the updates will be performed automatically by cron.', array(
+              ':url' => Url::fromRoute('field_encrypt.field_update')
+                ->toString()
+            )));
+          }
         }
       }
     }
@@ -168,7 +195,7 @@ class ConfigSubscriber implements EventSubscriberInterface {
    * @return bool
    *   Whether the config has changed.
    */
-  protected function configChanged(Config $config) {
+  protected function encryptionConfigChanged(Config $config) {
     // Get both the newly saved and original field_encrypt configuration.
     $new_config = $config->get('third_party_settings.field_encrypt');
     $original_config = $config->getOriginal('third_party_settings.field_encrypt');

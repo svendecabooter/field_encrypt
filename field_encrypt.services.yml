@@ -9,6 +9,6 @@ services:
 
   field_encrypt.config_subscriber:
     class: Drupal\field_encrypt\EventSubscriber\ConfigSubscriber
-    arguments: ['@entity_type.manager', '@entity.query', '@queue', '@string_translation', '@field_encrypt.encrypted_field_value_manager']
+    arguments: ['@entity_type.manager', '@entity.query', '@queue', '@string_translation', '@field_encrypt.encrypted_field_value_manager', '@cache_tags.invalidator']
     tags:
       - { name: event_subscriber }

@@ -62,7 +62,7 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
    * Test caching of encrypted fields on entity level.
    */
   public function testEntityCache() {
-    // Check if entity with cache excluded fields is cached by the entity
+    // Check if entity with uncacheable fields is cached by the entity
     // storage.
     $entity_type = $this->testNode->getEntityTypeId();
     $cid = "values:$entity_type:" . $this->testNode->id();
