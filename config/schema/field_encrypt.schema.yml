@@ -14,7 +14,7 @@ field.storage.*.*.third_party.field_encrypt:
     encryption_profile:
       type: string
       label: 'Encryption profile'
-    cache_exclude:
+    uncacheable:
       type: boolean
       label: 'Exclude from cache'
 

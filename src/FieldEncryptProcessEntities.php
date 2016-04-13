@@ -342,8 +342,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    * {@inheritdoc}
    */
   public function entitySetCacheTags(ContentEntityInterface $entity, &$build) {
-    $cache_exclude_fields = $this->getCacheExcludeFields($entity);
-    foreach ($cache_exclude_fields as $field_name) {
+    $uncacheable_fields = $this->getUncacheableFields($entity);
+    foreach ($uncacheable_fields as $field_name) {
       $build[$field_name]['#cache']['max-age'] = 0;
     }
   }
@@ -352,8 +352,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    * {@inheritdoc}
    */
   public function entityCheckPersistentCache(ContentEntityInterface $entity) {
-    $cache_exclude_fields = $this->getCacheExcludeFields($entity);
-    if (!empty($cache_exclude_fields)) {
+    $uncacheable_fields = $this->getUncacheableFields($entity);
+    if (!empty($uncacheable_fields)) {
       // Some fields don't want to be cached, so clear the persistent entity
       // cache, to avoid their values to be cached unencrypted.
       /** @var \Drupal\Core\Entity\ContentEntityStorageInterface $storage */
@@ -371,8 +371,8 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
    * @return array
    *   List of field names that are excluded from cache.
    */
-  protected function getCacheExcludeFields(ContentEntityInterface $entity) {
-    $cache_exclude_fields = [];
+  protected function getUncacheableFields(ContentEntityInterface $entity) {
+    $uncacheable_fields = [];
     foreach ($entity->getFields() as $field) {
       if ($this->checkField($field)) {
         /* @var $definition \Drupal\Core\Field\BaseFieldDefinition */
@@ -380,13 +380,13 @@ class FieldEncryptProcessEntities implements FieldEncryptProcessEntitiesInterfac
         /* @var $storage \Drupal\Core\Field\FieldConfigStorageBase */
         $storage = $definition->get('fieldStorage');
 
-        // If cache_exclude is set, set caching max-age to 0.
-        if ($storage->getThirdPartySetting('field_encrypt', 'cache_exclude', TRUE) == TRUE) {
-          $cache_exclude_fields[] = $field->getName();
+        // If uncacheable is set, set caching max-age to 0.
+        if ($storage->getThirdPartySetting('field_encrypt', 'uncacheable', TRUE) == TRUE) {
+          $uncacheable_fields[] = $field->getName();
         }
       }
     }
-    return $cache_exclude_fields;
+    return $uncacheable_fields;
   }
 
 }

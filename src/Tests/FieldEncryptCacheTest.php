@@ -89,7 +89,7 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
   /**
    * Set up storage settings for test fields.
    */
-  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE, $cache_exclude = TRUE) {
+  protected function setFieldStorageSettings($encryption = TRUE, $alternate = FALSE, $uncacheable = TRUE) {
     $fields = [
       'node.field_test_single' => [
         'properties' => ['value' => 'value', 'summary' => 'summary'],
@@ -107,13 +107,13 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
         $field_storage->setThirdPartySetting('field_encrypt', 'encrypt', TRUE);
         $field_storage->setThirdPartySetting('field_encrypt', 'properties', $settings['properties']);
         $field_storage->setThirdPartySetting('field_encrypt', 'encryption_profile', $settings['profile']);
-        $field_storage->setThirdPartySetting('field_encrypt', 'cache_exclude', $cache_exclude);
+        $field_storage->setThirdPartySetting('field_encrypt', 'uncacheable', $uncacheable);
       }
       else {
         $field_storage->unsetThirdPartySetting('field_encrypt', 'encrypt');
         $field_storage->unsetThirdPartySetting('field_encrypt', 'properties');
         $field_storage->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
-        $field_storage->unsetThirdPartySetting('field_encrypt', 'cache_exclude');
+        $field_storage->unsetThirdPartySetting('field_encrypt', 'uncacheable');
       }
       $field_storage->save();
     }

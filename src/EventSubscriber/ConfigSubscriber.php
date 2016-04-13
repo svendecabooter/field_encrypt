@@ -173,9 +173,9 @@ class ConfigSubscriber implements EventSubscriberInterface {
     $new_config = $config->get('third_party_settings.field_encrypt');
     $original_config = $config->getOriginal('third_party_settings.field_encrypt');
 
-    // Don't compare 'cache_exclude' setting.
-    unset($new_config['cache_exclude']);
-    unset($original_config['cache_exclude']);
+    // Don't compare 'uncacheable' setting.
+    unset($new_config['uncacheable']);
+    unset($original_config['uncacheable']);
     return $new_config !== $original_config;
   }
 }

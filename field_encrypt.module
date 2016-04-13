@@ -86,11 +86,11 @@ function field_encrypt_form_alter(&$form, FormStateInterface $form_state, $form_
       );
 
       // Add setting to decide if field should be excluded from cache.
-      $form['field_encrypt']['field_encrypt']['cache_exclude'] = [
+      $form['field_encrypt']['field_encrypt']['uncacheable'] = [
         '#type' => 'checkbox',
         '#title' => t('Exclude from cache'),
         '#description' => t('Exclude this field from being cached. This will make sure your unencrypted data will not be exposed in the cache, but could have impact on your performance.'),
-        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'cache_exclude', TRUE),
+        '#default_value' => $field->getThirdPartySetting('field_encrypt', 'uncacheable', TRUE),
         '#states' => [
           'visible' => [
             ':input[name="field_encrypt[encrypt]"]' => array('checked' => TRUE),
@@ -131,7 +131,7 @@ function field_encrypt_form_field_add_form_builder($entity_type, \Drupal\field\E
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'encrypt');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'properties');
     $field_storage_config->unsetThirdPartySetting('field_encrypt', 'encryption_profile');
-    $field_storage_config->unsetThirdPartySetting('field_encrypt', 'cache_exclude');
+    $field_storage_config->unsetThirdPartySetting('field_encrypt', 'uncacheable');
   }
 }
 
