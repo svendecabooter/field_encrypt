@@ -338,6 +338,34 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
    */
   public function encyptDecryptEntityDataProvider() {
     return [
+      'encrypted_string' => [
+        'string',
+        [
+          'value' => new DataDefinition([
+            'type' => 'string',
+            'required' => TRUE,
+            'settings' => ['case_sensitive' => FALSE],
+          ]),
+        ],
+        ['value' => 'value'],
+        [['value' => 'unencrypted text']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_string_long' => [
+        'string_long',
+        [
+          'value' => new DataDefinition([
+            'type' => 'string',
+            'required' => TRUE,
+            'settings' => ['case_sensitive' => FALSE],
+          ]),
+        ],
+        ['value' => 'value'],
+        [['value' => 'unencrypted text']],
+        [['value' => '[ENCRYPTED]']],
+        TRUE,
+      ],
       'encrypted_text' => [
         'text',
         [
@@ -351,7 +379,62 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
           ]),
         ],
         ['value' => 'value', 'format' => 'format'],
-        [['value' => 'unencrypted text']],
+        [['value' => '<p>unencrypted text</p>', 'format' => 'basic_html']],
+        [['value' => '[ENCRYPTED]', 'format' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_text_long' => [
+        'text_long',
+        [
+          'value' => new DataDefinition(['type' => 'string', 'required' => TRUE]),
+          'format' => new DataDefinition(['type' => 'filter_format']),
+          'processed' => new DataDefinition([
+            'type' => 'string',
+            'computed' => TRUE,
+            'class' => '\Drupal\text\TextProcessed',
+            'settings' => ['text source' => 'value'],
+          ]),
+        ],
+        ['value' => 'value', 'format' => 'format'],
+        [['value' => '<p>unencrypted text</p>', 'format' => 'basic_html']],
+        [['value' => '[ENCRYPTED]', 'format' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_text_with_summary' => [
+        'text_with_summary',
+        [
+          'value' => new DataDefinition(['type' => 'string', 'required' => TRUE]),
+          'format' => new DataDefinition(['type' => 'filter_format']),
+          'processed' => new DataDefinition([
+            'type' => 'string',
+            'computed' => TRUE,
+            'class' => '\Drupal\text\TextProcessed',
+            'settings' => ['text source' => 'value'],
+          ]),
+          'summary' => new DataDefinition(['type' => 'string', 'required' => TRUE]),
+          'summary_processed' => new DataDefinition([
+            'type' => 'string',
+            'computed' => TRUE,
+            'class' => '\Drupal\text\TextProcessed',
+            'settings' => ['text source' => 'summarys'],
+          ]),
+        ],
+        ['value' => 'value', 'summary' => 'summary', 'format' => 'format'],
+        [['value' => '<p>unencrypted text</p>', 'summary' => 'summary', 'format' => 'basic_html']],
+        [['value' => '[ENCRYPTED]', 'summary' => '[ENCRYPTED]', 'format' => '[ENCRYPTED]']],
+        TRUE,
+      ],
+      'encrypted_list_string' => [
+        'list_string',
+        [
+          'value' => new DataDefinition([
+            'type' => 'string',
+            'required' => TRUE,
+            'constraints' => ['Length' => ['max' => 255]]
+          ]),
+        ],
+        ['value' => 'value'],
+        [['value' => 'value1']],
         [['value' => '[ENCRYPTED]']],
         TRUE,
       ],
@@ -420,6 +503,17 @@ class FieldEncryptProcessEntitiesTest extends UnitTestCase {
         'float',
         ['value' => new DataDefinition([
             'type' => 'float',
+            'required' => TRUE]
+        )],
+        ['value' => 'value'],
+        [['value' => '3.14']],
+        [['value' => 0]],
+        TRUE,
+      ],
+      'encrypted_decimal' => [
+        'decimal',
+        ['value' => new DataDefinition([
+            'type' => 'string',
             'required' => TRUE]
         )],
         ['value' => 'value'],
