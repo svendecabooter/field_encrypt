@@ -26,10 +26,19 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
   public static $modules = ['dynamic_page_cache'];
 
   /**
+   * The entity type manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp() {
     parent::setUp();
+
+    $this->entityTypeManager = $this->container->get('entity_type.manager');
 
     // Set up fields for encryption.
     $this->setFieldStorageSettings(TRUE);
@@ -67,11 +76,21 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
     $entity_type = $this->testNode->getEntityTypeId();
     $cid = "values:$entity_type:" . $this->testNode->id();
 
+    // Check uncacheable_entity_types setting.
+    $types = \Drupal::state()->get('uncacheable_entity_types');
+    $this->assertEqual(['node' => 'node'], $types);
+
+    // Check whether node entities are marked as uncacheable.
+    $this->entityTypeManager->clearCachedDefinitions();
+    $definition = $this->entityTypeManager->getDefinition('node');
+    $this->assertFalse($definition->isPersistentlyCacheable());
+    $this->assertFalse($definition->isRenderCacheable());
+    $this->assertFalse($definition->isStaticallyCacheable());
+
     // Check that no initial cache entry is present.
     $this->assertFalse(\Drupal::cache('entity')->get($cid), 'Entity cache: no initial cache.');
 
     $controller = $this->entityManager->getStorage($entity_type);
-    $controller->resetCache();
     $controller->load($this->testNode->id());
 
     // Check if entity gets cached.
@@ -79,7 +98,20 @@ class FieldEncryptCacheTest extends FieldEncryptTestBase {
 
     // Set encrypted field as cacheable.
     $this->setFieldStorageSettings(TRUE, FALSE, FALSE);
-    $controller->resetCache();
+
+    // Check uncacheable_entity_types setting.
+    $types = \Drupal::state()->get('uncacheable_entity_types');
+    $this->assertEqual([], $types);
+
+    // Check whether node entities are marked as cacheable.
+    $this->entityTypeManager->clearCachedDefinitions();
+    $definition = $this->entityTypeManager->getDefinition('node');
+    $this->assertTrue($definition->isPersistentlyCacheable());
+    $this->assertTrue($definition->isRenderCacheable());
+    $this->assertTrue($definition->isStaticallyCacheable());
+
+    // Load the node again. It should be cached now.
+    $controller = $this->entityManager->getStorage($entity_type);
     $controller->load($this->testNode->id());
 
     $cache = \Drupal::cache('entity')->get($cid);

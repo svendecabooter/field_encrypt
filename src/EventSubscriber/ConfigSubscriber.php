@@ -7,14 +7,16 @@
 
 namespace Drupal\field_encrypt\EventSubscriber;
 
-use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigCrudEvent;
 use Drupal\Core\Config\ConfigEvents;
+use Drupal\Core\Entity\ContentEntityTypeInterface;
+use Drupal\Core\Entity\DynamicallyFieldableEntityStorageInterface;
+use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Url;
@@ -33,7 +35,7 @@ class ConfigSubscriber implements EventSubscriberInterface {
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  protected $entityManager;
+  protected $entityTypeManager;
 
   /**
    * The entity query service.
@@ -57,18 +59,18 @@ class ConfigSubscriber implements EventSubscriberInterface {
   protected $encryptedFieldValueManager;
 
   /**
-   * Cache backend instance.
+   * Entity manager.
    *
-   * @var \Drupal\Core\Cache\CacheBackendInterface
+   * @var \Drupal\Core\Entity\EntityManagerInterface
    */
-  protected $cacheBackend;
+  protected $entityManager;
 
   /**
-   * The cache tags invalidator.
+   * The state key value store.
    *
-   * @var \Drupal\Core\Cache\CacheTagsInvalidatorInterface
+   * @var \Drupal\Core\State\StateInterface
    */
-  protected $cacheTagsInvalidator;
+  protected $state;
 
   /**
    * Constructs a new ConfigSubscriber object.
@@ -83,16 +85,19 @@ class ConfigSubscriber implements EventSubscriberInterface {
    *   The string translation service.
    * @param \Drupal\field_encrypt\EncryptedFieldValueManagerInterface $encrypted_field_value_manager
    *   The EncryptedFieldValue entity manager.
-   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cache_tags_invalidator
-   *   The cache tags invalidator.
+   * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
+   *   The entity manager.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The state key value store.
    */
-  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation, EncryptedFieldValueManagerInterface $encrypted_field_value_manager, CacheTagsInvalidatorInterface $cache_tags_invalidator) {
-    $this->entityManager = $entity_manager;
+  public function __construct(EntityTypeManagerInterface $entity_manager, QueryFactory $entity_query, QueueFactory $queue_factory, TranslationInterface $translation, EncryptedFieldValueManagerInterface $encrypted_field_value_manager, EntityManagerInterface $entity_manager, StateInterface $state) {
+    $this->entityTypeManager = $entity_manager;
     $this->entityQuery = $entity_query;
     $this->queueFactory = $queue_factory;
     $this->stringTranslation = $translation;
     $this->encryptedFieldValueManager = $encrypted_field_value_manager;
-    $this->cacheTagsInvalidator = $cache_tags_invalidator;
+    $this->entityManager = $entity_manager;
+    $this->state = $state;
   }
 
   /**
@@ -116,10 +121,8 @@ class ConfigSubscriber implements EventSubscriberInterface {
       // Get the original field_encrypt configuration.
       $original_config = $config->getOriginal('third_party_settings.field_encrypt');
 
-      // Clear entity_type discovery cache, if "uncacheable" setting changed.
-      //if ($new_config['uncacheable'] !== $original_config['uncacheable']) {
-        $this->cacheTagsInvalidator->invalidateTags(['entity_types', 'entity_field_info']);
-      //}
+      // Update the uncacheable entity types list.
+      $this->setUncacheableEntityTypes();
 
       // Update existing entities, if data encryption settings changed.
       if ($this->encryptionConfigChanged($config)) {
@@ -137,7 +140,7 @@ class ConfigSubscriber implements EventSubscriberInterface {
             // Check if the field is present.
             $query->exists($field_name);
             // Make sure to get all revisions for revisionable entities.
-            if ($this->entityManager->getDefinition($entity_type)
+            if ($this->entityTypeManager->getDefinition($entity_type)
               ->hasKey('revision')
             ) {
               $query->allRevisions();
@@ -205,4 +208,39 @@ class ConfigSubscriber implements EventSubscriberInterface {
     unset($original_config['uncacheable']);
     return $new_config !== $original_config;
   }
+
+  /**
+   * Figure out which entity types are uncacheable due to encrypted fields.
+   */
+  protected function setUncacheableEntityTypes() {
+    $types = [];
+    $entity_types = $this->entityTypeManager->getDefinitions();
+    foreach ($entity_types as $entity_type) {
+      if ($entity_type instanceof ContentEntityTypeInterface) {
+        $storage_class = $this->entityManager->createHandlerInstance($entity_type->getStorageClass(), $entity_type);
+        if ($storage_class instanceof DynamicallyFieldableEntityStorageInterface) {
+          // Query by filtering on the ID as this is more efficient than filtering
+          // on the entity_type property directly.
+          $ids = $this->entityQuery->get('field_storage_config')
+            ->condition('id', $entity_type->id() . '.', 'STARTS_WITH')
+            ->execute();
+          // Fetch all fields on entity type.
+          $field_storages = FieldStorageConfig::loadMultiple($ids);
+          if ($field_storages) {
+            foreach ($field_storages as $storage) {
+              // Check if field is encrypted.
+              if ($storage->getThirdPartySetting('field_encrypt', 'uncacheable', FALSE) == TRUE) {
+                // If there is an encrypted field, mark this entity type as
+                // uncacheable.
+                $type = $storage->getTargetEntityTypeId();
+                $types[$type] = $type;
+              }
+            }
+          }
+        }
+      }
+    }
+    $this->state->set('uncacheable_entity_types', $types);
+  }
+
 }
